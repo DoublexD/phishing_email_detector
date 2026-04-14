@@ -1,0 +1,35 @@
+# Optional Dependencies
+# Te pakiety są opcjonalne i mogą powodować konflikty zależności
+# Instaluj tylko jeśli naprawdę ich potrzebujesz
+
+# IP Geolocation (ma konflikt z dnspython)
+# ipwhois==1.2.0  # Wymaga dnspython<=2.0.0 - KONFLIKT!
+# geoip2==4.7.0
+
+# Alternatywy dla geolokalizacji IP:
+# python-geoip>=1.2
+# ip2geotools>=0.1.6
+
+# Jupyter dla notebooks
+jupyter>=1.0.0
+notebook>=7.0.0
+ipykernel>=6.0.0
+
+# Dodatkowe narzędzia do wizualizacji
+matplotlib>=3.8.0
+seaborn>=0.13.0
+plotly>=5.18.0
+
+# Zaawansowane monitorowanie
+sentry-sdk>=1.39.0
+
+# Opcjonalne bazy danych
+psycopg2-binary>=2.9.9  # PostgreSQL
+pymysql>=1.1.0          # MySQL
+redis>=5.0.0            # Redis
+
+# Dodatkowe narzędzia ML
+xgboost>=2.0.0
+lightgbm>=4.1.0
+catboost>=1.2.0
+
