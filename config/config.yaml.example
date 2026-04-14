@@ -1,0 +1,128 @@
+# Email Spoofing Detector Configuration
+
+# API Configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  workers: 4
+  reload: false
+
+# IMAP Configuration (for continuous monitoring)
+imap:
+  enabled: false
+  server: "imap.gmail.com"
+  port: 993
+  username: "your-email@gmail.com"
+  password: "your-app-password"
+  folder: "INBOX"
+  check_interval: 60  # seconds
+  ssl: true
+
+# Email Authentication
+authentication:
+  spf:
+    enabled: true
+    timeout: 5
+  dkim:
+    enabled: true
+    timeout: 5
+  dmarc:
+    enabled: true
+    timeout: 5
+
+# Machine Learning Models
+models:
+  random_forest:
+    enabled: true
+    model_path: "models/random_forest_classifier.joblib"
+    n_estimators: 100
+    max_depth: 20
+    min_samples_split: 5
+    class_weight: "balanced"
+  
+  isolation_forest:
+    enabled: true
+    model_path: "models/isolation_forest_anomaly.joblib"
+    n_estimators: 100
+    contamination: 0.1
+    max_samples: 256
+
+# Feature Extraction
+features:
+  ip_analysis:
+    enabled: true
+    geolocation: true
+    blacklist_check: true
+  
+  temporal:
+    enabled: true
+    timezone_check: true
+    time_delta_analysis: true
+  
+  header_analysis:
+    enabled: true
+    hop_count: true
+    received_chain: true
+    missing_headers: true
+  
+  content_analysis:
+    enabled: true
+    url_extraction: true
+    suspicious_keywords: true
+
+# Classification Thresholds
+thresholds:
+  high_risk: 0.8
+  medium_risk: 0.5
+  low_risk: 0.3
+
+# Actions
+actions:
+  high_risk: "QUARANTINE"
+  medium_risk: "FLAG"
+  low_risk: "ALLOW"
+
+# Logging
+logging:
+  level: "INFO"
+  format: "json"
+  file: "logs/detector.log"
+  rotation: "daily"
+  retention: 30  # days
+
+# Database (Optional)
+database:
+  enabled: false
+  type: "sqlite"  # or "postgresql", "mysql"
+  host: "localhost"
+  port: 5432
+  name: "email_detector"
+  username: "user"
+  password: "password"
+
+# Performance
+performance:
+  max_email_size: 10485760  # 10 MB
+  processing_timeout: 30  # seconds
+  cache_enabled: true
+  cache_ttl: 3600  # seconds
+
+# Monitoring
+monitoring:
+  prometheus:
+    enabled: false
+    port: 9090
+  
+  alerts:
+    email_enabled: false
+    email_to: "admin@example.com"
+    slack_enabled: false
+    slack_webhook: ""
+
+# Data Collection
+data_collection:
+  save_analyzed_emails: false
+  save_path: "data/analyzed/"
+  anonymize: true
+

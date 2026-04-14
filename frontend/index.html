@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Spoofing Detector - P5anel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🔒 Email Spoofing Detector</h1>
+                <p class="subtitle">System wykrywania spoofingu i phishingu</p>
+            </div>
+            <div class="header-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-analyzed">0</div>
+                    <div class="stat-label">Przeanalizowane</div>
+                </div>
+                <div class="stat-card danger">
+                    <div class="stat-value" id="suspicious-detected">0</div>
+                    <div class="stat-label">Podejrzane</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value" id="safe-emails">0</div>
+                    <div class="stat-label">Bezpieczne</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="detection-rate">0%</div>
+                    <div class="stat-label">Wskaźnik detekcji</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav">
+            <button class="nav-button active" data-tab="alerts">
+                📢 Alerty
+            </button>
+            <button class="nav-button" data-tab="analyze">
+                🔍 Analiza
+            </button>
+            <button class="nav-button" data-tab="models">
+                🤖 Modele
+            </button>
+            <button class="nav-button" data-tab="stats">
+                📊 Statystyki
+            </button>
+        </nav>
+
+        <!-- Tabs -->
+        <main class="main-content">
+            <!-- Alerts Tab -->
+            <div class="tab-content active" id="alerts-tab">
+                <div class="section-header">
+                    <h2>Alerty bezpieczeństwa</h2>
+                    <div class="filter-controls">
+                        <select id="risk-filter" class="filter-select">
+                            <option value="">Wszystkie</option>
+                            <option value="HIGH">Wysokie ryzyko</option>
+                            <option value="MEDIUM">Średnie ryzyko</option>
+                            <option value="LOW">Niskie ryzyko</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="refreshAlerts()">
+                            🔄 Odśwież
+                        </button>
+                    </div>
+                </div>
+                <div id="alerts-container" class="alerts-container">
+                    <div class="loading">Ładowanie alertów...</div>
+                </div>
+            </div>
+
+            <!-- Analyze Tab -->
+            <div class="tab-content" id="analyze-tab">
+                <div class="section-header">
+                    <h2>Analizuj wiadomość e-mail</h2>
+                </div>
+                <div class="analyze-form">
+                    <textarea 
+                        id="email-input" 
+                        class="email-textarea"
+                        placeholder="Wklej tutaj surową wiadomość e-mail (z nagłówkami)..."></textarea>
+                    
+                    <div class="form-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="analyze-auth" checked>
+                            Sprawdź SPF/DKIM/DMARC
+                        </label>
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="analyzeEmail()">
+                        🔍 Analizuj
+                    </button>
+                    
+                    <div id="analysis-result" class="analysis-result" style="display: none;"></div>
+                </div>
+            </div>
+
+            <!-- Models Tab -->
+            <div class="tab-content" id="models-tab">
+                <div class="section-header">
+                    <h2>Informacje o modelach</h2>
+                    <button class="btn btn-secondary" onclick="refreshModels()">
+                        🔄 Odśwież
+                    </button>
+                </div>
+                <div id="models-container" class="models-container">
+                    <div class="loading">Ładowanie informacji o modelach...</div>
+                </div>
+                
+                <div class="section-header" style="margin-top: 2rem;">
+                    <h2>Najważniejsze cechy</h2>
+                </div>
+                <div id="features-container" class="features-container">
+                    <div class="loading">Ładowanie cech...</div>
+                </div>
+            </div>
+
+            <!-- Stats Tab -->
+            <div class="tab-content" id="stats-tab">
+                <div class="section-header">
+                    <h2>Szczegółowe statystyki</h2>
+                    <button class="btn btn-secondary" onclick="refreshStats()">
+                        🔄 Odśwież
+                    </button>
+                </div>
+                <div id="stats-container" class="stats-container">
+                    <div class="loading">Ładowanie statystyk...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
