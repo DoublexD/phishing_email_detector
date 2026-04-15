@@ -354,7 +354,7 @@ async function refreshStats() {
         const response = await fetch(`${API_BASE_URL}/api/stats`);
         const data = await response.json();
         
-        statsContainer.innerHTML = `
+        let html = `
             <div class="models-container">
                 <div class="model-card">
                     <h3>Ogólne statystyki</h3>
@@ -382,18 +382,93 @@ async function refreshStats() {
                         </p>` : ''
                     }
                 </div>
-                
-                <div class="model-card">
-                    <h3>Informacje o modelach</h3>
-                    <div class="model-details">
-                        <div class="model-detail">
-                            <div class="detail-label">Liczba modeli</div>
-                            <div class="detail-value">${data.model_info.total_models || 0}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         `;
+        
+        // Pobierz metryki ewaluacji modeli
+        try {
+            const evalResponse = await fetch(`${API_BASE_URL}/api/evaluation-metrics`);
+            if (evalResponse.ok) {
+                const evalData = await evalResponse.json();
+                
+                for (const [modelName, metrics] of Object.entries(evalData.models || {})) {
+                    const displayName = modelName === 'random_forest' 
+                        ? 'Random Forest' : 'Isolation Forest';
+                    
+                    const cm = metrics.confusion_matrix || [];
+                    const tn = cm[0] ? cm[0][0] : 0;
+                    const fp = cm[0] ? cm[0][1] : 0;
+                    const fn = cm[1] ? cm[1][0] : 0;
+                    const tp = cm[1] ? cm[1][1] : 0;
+                    
+                    html += `
+                        <div class="model-card">
+                            <h3>Skuteczność modelu: ${displayName}</h3>
+                            <div class="model-details">
+                                <div class="model-detail">
+                                    <div class="detail-label">Precision</div>
+                                    <div class="detail-value metric-good">${(metrics.precision * 100).toFixed(1)}%</div>
+                                </div>
+                                <div class="model-detail">
+                                    <div class="detail-label">Recall</div>
+                                    <div class="detail-value metric-good">${(metrics.recall * 100).toFixed(1)}%</div>
+                                </div>
+                                <div class="model-detail">
+                                    <div class="detail-label">F1-Score</div>
+                                    <div class="detail-value metric-good">${(metrics.f1_score * 100).toFixed(1)}%</div>
+                                </div>
+                                <div class="model-detail">
+                                    <div class="detail-label">Accuracy</div>
+                                    <div class="detail-value">${(metrics.accuracy * 100).toFixed(1)}%</div>
+                                </div>
+                            </div>
+                            <div class="confusion-matrix">
+                                <h4>Macierz pomyłek</h4>
+                                <table class="cm-table">
+                                    <thead>
+                                        <tr><th></th><th>Pred: Bezp.</th><th>Pred: Phish.</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr><td><strong>Rzecz: Bezp.</strong></td><td class="cm-tn">${tn}</td><td class="cm-fp">${fp}</td></tr>
+                                        <tr><td><strong>Rzecz: Phish.</strong></td><td class="cm-fn">${fn}</td><td class="cm-tp">${tp}</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (evalData.dataset) {
+                    html += `
+                        <div class="model-card">
+                            <h3>Zbiór danych treningowych</h3>
+                            <div class="model-details">
+                                <div class="model-detail">
+                                    <div class="detail-label">Łączna liczba próbek</div>
+                                    <div class="detail-value">${evalData.dataset.total_samples}</div>
+                                </div>
+                                <div class="model-detail">
+                                    <div class="detail-label">Bezpieczne</div>
+                                    <div class="detail-value">${evalData.dataset.negative_samples}</div>
+                                </div>
+                                <div class="model-detail">
+                                    <div class="detail-label">Phishing/spam</div>
+                                    <div class="detail-value">${evalData.dataset.positive_samples}</div>
+                                </div>
+                                <div class="model-detail">
+                                    <div class="detail-label">Liczba cech</div>
+                                    <div class="detail-value">${evalData.dataset.feature_count}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        } catch (evalError) {
+            console.warn('Evaluation metrics not available:', evalError);
+        }
+        
+        html += '</div>';
+        statsContainer.innerHTML = html;
     } catch (error) {
         console.error('Error loading stats:', error);
         statsContainer.innerHTML = '<div class="error">Błąd ładowania statystyk</div>';

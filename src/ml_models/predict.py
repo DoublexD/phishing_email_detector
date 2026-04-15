@@ -266,7 +266,7 @@ class EmailClassifier:
         if feat.get('from_return_path_mismatch', 0) == 1:
             suspicion_score += 15
             reasons.append("From/Return-Path mismatch")
-        if feat.get('reply_to_different_domain', 0) == 1:
+        if feat.get('from_reply_to_mismatch', 0) == 1:
             suspicion_score += 10
             reasons.append("Reply-To different domain")
         
@@ -288,23 +288,23 @@ class EmailClassifier:
             reasons.append("Shortened URLs")
         
         # 5. Podejrzana domena (15 punktów)
-        if feat.get('sender_domain_suspicious_tld', 0) == 1:
+        if feat.get('suspicious_tld_count', 0) > 0:
             suspicion_score += 10
             reasons.append("Suspicious TLD")
-        if feat.get('domain_numbers_count', 0) > 2:
+        if feat.get('from_has_numbers', 0) == 1:
             suspicion_score += 5
-            reasons.append("Numbers in domain")
+            reasons.append("Numbers in sender address")
         
         # 6. Nadmierna urgentność (10 punktów)
         if feat.get('exclamation_count', 0) >= 3:
             suspicion_score += 5
             reasons.append("Multiple exclamation marks")
-        if feat.get('all_caps_subject', 0) == 1:
+        if feat.get('capital_letter_ratio', 0) > 0.5:
             suspicion_score += 5
-            reasons.append("ALL CAPS subject")
+            reasons.append("High capital letter ratio")
         
         # 7. Załączniki wykonywalne (bonus)
-        if feat.get('has_executable_attachment', 0) == 1:
+        if feat.get('has_executable', 0) == 1:
             suspicion_score += 20
             reasons.append("Executable attachment")
         

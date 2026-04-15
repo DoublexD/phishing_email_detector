@@ -257,8 +257,31 @@ class ModelManager:
             version: Wersja modelu
             export_path: Ścieżka docelowa
         """
-        # TODO: Implementacja eksportu modelu
-        pass
+        import shutil
+        
+        if model_name not in self.metadata:
+            logger.error(f"Model {model_name} nie istnieje")
+            return
+        
+        if version not in self.metadata[model_name].get('versions', {}):
+            logger.error(f"Wersja {version} nie istnieje dla {model_name}")
+            return
+        
+        export_dir = Path(export_path)
+        export_dir.mkdir(parents=True, exist_ok=True)
+        
+        model_files = list(self.models_dir.glob("*.joblib"))
+        for model_file in model_files:
+            dest = export_dir / model_file.name
+            shutil.copy2(model_file, dest)
+            logger.info(f"Wyeksportowano: {model_file.name} -> {dest}")
+        
+        metadata_dest = export_dir / "metadata.json"
+        import json
+        with open(metadata_dest, 'w') as f:
+            json.dump({model_name: self.metadata[model_name]}, f, indent=2, default=str)
+        
+        logger.info(f"Eksport modelu {model_name} v{version} zakończony: {export_path}")
     
     def get_model_stats(self) -> Dict[str, Any]:
         """

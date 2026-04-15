@@ -19,13 +19,14 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from email_parser.parser import EmailParser
 from email_parser.header_analyzer import HeaderAnalyzer
+from email_parser.imap_client import IMAPClient
 from authentication.spf_checker import SPFChecker
 from authentication.dkim_checker import DKIMChecker
 from authentication.dmarc_checker import DMARCChecker
 from feature_extraction.extractor import FeatureExtractor
 from ml_models.predict import EmailClassifier
 from ml_models.model_manager import ModelManager
-from utils.helpers import setup_logging, load_config
+from utils.helpers import setup_logging, load_config, save_json, load_json
 
 # Konfiguracja logowania
 logger = setup_logging()
@@ -62,14 +63,33 @@ feature_extractor = FeatureExtractor()
 classifier = EmailClassifier(models_dir=_models_dir)
 model_manager = ModelManager(models_dir=_models_dir)
 
-# Przechowywanie alertów (w produkcji użyj bazy danych)
-alerts = []
-statistics = {
-    'total_analyzed': 0,
-    'suspicious_detected': 0,
-    'safe_emails': 0,
-    'last_updated': None
-}
+# Ścieżki persystencji
+_data_dir = Path(__file__).parent.parent.parent / "data"
+_stats_file = _data_dir / "stats.json"
+_alerts_file = _data_dir / "alerts.json"
+
+def _load_persisted_stats() -> dict:
+    try:
+        if _stats_file.exists():
+            return load_json(str(_stats_file))
+    except Exception:
+        pass
+    return {'total_analyzed': 0, 'suspicious_detected': 0, 'safe_emails': 0, 'last_updated': None}
+
+def _load_persisted_alerts() -> list:
+    try:
+        if _alerts_file.exists():
+            return load_json(str(_alerts_file))
+    except Exception:
+        pass
+    return []
+
+alerts = _load_persisted_alerts()
+statistics = _load_persisted_stats()
+
+# Stan monitorowania IMAP
+imap_monitor_active = False
+imap_monitor_thread = None
 
 
 # Modele Pydantic
@@ -79,13 +99,14 @@ class EmailAnalysisRequest(BaseModel):
     email_string: Optional[str] = Field(None, description="Wiadomość e-mail jako string")
     analyze_authentication: bool = Field(True, description="Czy sprawdzać SPF/DKIM/DMARC")
     
-    class Config:
-        json_schema_extra = {
-            "example": {
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{
                 "email_string": "From: sender@example.com\nTo: recipient@example.com\nSubject: Test\n\nTest message",
                 "analyze_authentication": True
-            }
+            }]
         }
+    }
 
 
 class EmailAnalysisResponse(BaseModel):
@@ -103,6 +124,8 @@ class EmailAnalysisResponse(BaseModel):
 
 class StatsResponse(BaseModel):
     """Statystyki systemu"""
+    model_config = {"protected_namespaces": ()}
+    
     total_analyzed: int
     suspicious_detected: int
     safe_emails: int
@@ -250,6 +273,8 @@ async def analyze_email(request: EmailAnalysisRequest, background_tasks: Backgro
         
         return response
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Błąd analizy e-maila: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Błąd analizy: {str(e)}")
@@ -343,6 +368,19 @@ async def get_feature_importance(top_n: int = 20):
     }
 
 
+@app.get("/api/evaluation-metrics")
+async def get_evaluation_metrics():
+    """Zwraca metryki ewaluacji modeli (precision, recall, F1-score) z ostatniego treningu"""
+    import json
+    
+    eval_path = Path(_models_dir) / "evaluation_results.json"
+    if not eval_path.exists():
+        raise HTTPException(status_code=404, detail="Brak wyników ewaluacji - wytrenuj modele najpierw")
+    
+    with open(eval_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
 # Funkcje pomocnicze
 def save_alert(alert_id: str, 
               email_data: Dict[str, Any],
@@ -363,6 +401,10 @@ def save_alert(alert_id: str,
     }
     
     alerts.append(alert)
+    try:
+        save_json(alerts, str(_alerts_file))
+    except Exception as e:
+        logger.warning(f"Nie udało się zapisać alertów: {e}")
     logger.info(f"Utworzono alert: {alert_id}")
 
 
@@ -373,7 +415,7 @@ def _get_recommendation_from_risk(risk_level: str) -> str:
 
 
 def update_statistics(is_suspicious: bool):
-    """Aktualizuje statystyki"""
+    """Aktualizuje statystyki i zapisuje na dysk"""
     statistics['total_analyzed'] += 1
     
     if is_suspicious:
@@ -382,6 +424,106 @@ def update_statistics(is_suspicious: bool):
         statistics['safe_emails'] += 1
     
     statistics['last_updated'] = datetime.now().isoformat()
+    try:
+        save_json(statistics, str(_stats_file))
+    except Exception as e:
+        logger.warning(f"Nie udało się zapisać statystyk: {e}")
+
+
+def _process_imap_email(raw_email: bytes):
+    """Callback do przetwarzania e-maili z monitorowania IMAP"""
+    try:
+        email_data = email_parser.parse_raw_email(raw_email)
+        header_analysis = header_analyzer.analyze(email_data)
+        
+        spf_result = spf_checker.check_from_email_data(email_data)
+        dkim_result = dkim_checker.check_from_email_data(email_data, raw_email)
+        dmarc_result = dmarc_checker.check_from_email_data(email_data)
+        
+        features = feature_extractor.extract_features(
+            email_data, spf_result=spf_result, dkim_result=dkim_result,
+            dmarc_result=dmarc_result, header_analysis=header_analysis
+        )
+        
+        prediction = classifier.predict(features)
+        update_statistics(prediction['is_suspicious'])
+        
+        if prediction['is_suspicious']:
+            alert_id = f"IMAP_{datetime.now().strftime('%Y%m%d%H%M%S')}_{len(alerts)}"
+            indicators = []
+            if spf_result and spf_result.get('result') in ('fail', 'softfail'):
+                indicators.append(f"SPF_{spf_result['result'].upper()}")
+            if dkim_result and not dkim_result.get('valid'):
+                indicators.append("DKIM_INVALID")
+            save_alert(alert_id, email_data, prediction, None, indicators)
+            
+        logger.info(f"IMAP: przetworzono e-mail od {email_data.get('from', {}).get('email', '?')}, "
+                     f"suspicious={prediction['is_suspicious']}")
+    except Exception as e:
+        logger.error(f"IMAP: błąd przetwarzania e-maila: {e}")
+
+
+@app.post("/api/imap/start")
+async def start_imap_monitoring(background_tasks: BackgroundTasks):
+    """Uruchamia ciągłe monitorowanie skrzynki IMAP"""
+    global imap_monitor_active, imap_monitor_thread
+    
+    if imap_monitor_active:
+        return {"status": "already_running", "message": "Monitorowanie IMAP jest już aktywne"}
+    
+    imap_config = config.get('imap', {})
+    if not imap_config.get('server') or not imap_config.get('username'):
+        raise HTTPException(status_code=400,
+                            detail="Brak konfiguracji IMAP w config/config.yaml")
+    
+    import threading
+    
+    def run_monitor():
+        global imap_monitor_active
+        imap_monitor_active = True
+        try:
+            client = IMAPClient(
+                server=imap_config['server'],
+                username=imap_config['username'],
+                password=imap_config.get('password', ''),
+                port=imap_config.get('port', 993),
+                use_ssl=imap_config.get('ssl', True),
+                folder=imap_config.get('folder', 'INBOX')
+            )
+            client.monitor_continuous(
+                callback=_process_imap_email,
+                interval=imap_config.get('check_interval', 60)
+            )
+        except Exception as e:
+            logger.error(f"Błąd monitorowania IMAP: {e}")
+        finally:
+            imap_monitor_active = False
+    
+    imap_monitor_thread = threading.Thread(target=run_monitor, daemon=True)
+    imap_monitor_thread.start()
+    
+    return {"status": "started", "message": "Monitorowanie IMAP uruchomione"}
+
+
+@app.post("/api/imap/stop")
+async def stop_imap_monitoring():
+    """Zatrzymuje monitorowanie IMAP"""
+    global imap_monitor_active
+    
+    if not imap_monitor_active:
+        return {"status": "not_running", "message": "Monitorowanie IMAP nie jest aktywne"}
+    
+    imap_monitor_active = False
+    return {"status": "stopped", "message": "Monitorowanie IMAP zatrzymane"}
+
+
+@app.get("/api/imap/status")
+async def get_imap_status():
+    """Zwraca status monitorowania IMAP"""
+    return {
+        "active": imap_monitor_active,
+        "configured": bool(config.get('imap', {}).get('server'))
+    }
 
 
 # Uruchomienie aplikacji

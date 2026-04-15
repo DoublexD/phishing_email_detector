@@ -301,7 +301,44 @@ class ModelTrainer:
         # Zapisz modele
         self.save_models()
         
+        # Zapisz wyniki ewaluacji na dysk
+        self._save_evaluation_results(results, X, y)
+        
         return results
+    
+    def _save_evaluation_results(self, results: Dict[str, Any],
+                                  X: pd.DataFrame, y: pd.Series):
+        """Zapisuje wyniki ewaluacji do pliku JSON"""
+        import json
+        
+        eval_data = {
+            'timestamp': pd.Timestamp.now().isoformat(),
+            'dataset': {
+                'total_samples': len(y),
+                'positive_samples': int(y.sum()),
+                'negative_samples': int((y == 0).sum()),
+                'feature_count': X.shape[1],
+                'feature_names': X.columns.tolist()
+            },
+            'models': {}
+        }
+        
+        for model_name, model_results in results.items():
+            report = model_results.get('classification_report', {})
+            eval_data['models'][model_name] = {
+                'precision': report.get('1', report.get('1.0', {})).get('precision', 0),
+                'recall': report.get('1', report.get('1.0', {})).get('recall', 0),
+                'f1_score': report.get('1', report.get('1.0', {})).get('f1-score', 0),
+                'accuracy': report.get('accuracy', 0),
+                'confusion_matrix': model_results.get('confusion_matrix', []),
+                'classification_report': report,
+            }
+        
+        eval_path = self.models_dir / "evaluation_results.json"
+        with open(eval_path, 'w', encoding='utf-8') as f:
+            json.dump(eval_data, f, indent=2, ensure_ascii=False, default=str)
+        
+        logger.info(f"Zapisano wyniki ewaluacji: {eval_path}")
 
 
 def main():

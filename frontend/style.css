@@ -502,6 +502,50 @@ body {
     margin: 1rem 0;
 }
 
+/* ML Metrics */
+.metric-good {
+    color: #2e7d32 !important;
+}
+
+.confusion-matrix {
+    margin-top: 1.5rem;
+}
+
+.confusion-matrix h4 {
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    color: #555;
+}
+
+.cm-table {
+    width: 100%;
+    max-width: 400px;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.cm-table th, .cm-table td {
+    padding: 0.6rem 1rem;
+    text-align: center;
+    border: 1px solid #e0e0e0;
+}
+
+.cm-table th {
+    background: #f5f5f5;
+    font-weight: 600;
+    color: #555;
+}
+
+.cm-table td {
+    background: white;
+    font-weight: 600;
+}
+
+.cm-tn { color: #2e7d32; background: #e8f5e9 !important; }
+.cm-tp { color: #2e7d32; background: #e8f5e9 !important; }
+.cm-fp { color: #c62828; background: #ffebee !important; }
+.cm-fn { color: #c62828; background: #ffebee !important; }
+
 /* Responsive */
 @media (max-width: 768px) {
     .header-content h1 {
