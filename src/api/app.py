@@ -216,16 +216,31 @@ async def analyze_email(request: EmailAnalysisRequest, background_tasks: Backgro
         # Klasyfikacja
         prediction = classifier.predict(features)
         
-        # Zbierz wskaźniki spoofingu
+        # Zbierz wskaźniki spoofingu — rozróżniamy silne (aktywne fałszerstwo)
+        # od informacyjnych (brak konfiguracji, co jest normalne dla wielu domen)
         spoofing_indicators = []
+        info_indicators = []
         
         if authentication_results:
-            if authentication_results['spf'].get('result') in ['fail', 'softfail']:
-                spoofing_indicators.append(f"SPF_{authentication_results['spf']['result'].upper()}")
-            if not authentication_results['dkim'].get('valid'):
-                spoofing_indicators.append("DKIM_INVALID")
+            spf_result = authentication_results['spf'].get('result', 'none')
+            if spf_result == 'fail':
+                spoofing_indicators.append("SPF_FAIL")
+            elif spf_result == 'softfail':
+                spoofing_indicators.append("SPF_SOFTFAIL")
+            elif spf_result == 'none':
+                info_indicators.append("SPF_NONE")
+            
+            dkim_data = authentication_results['dkim']
+            if dkim_data.get('result') == 'fail':
+                spoofing_indicators.append("DKIM_FAIL")
+            elif dkim_data.get('result') == 'none':
+                info_indicators.append("DKIM_NONE")
+            
             if not authentication_results['dmarc'].get('valid'):
-                spoofing_indicators.append("DMARC_NOT_CONFIGURED")
+                if authentication_results['dmarc'].get('record'):
+                    spoofing_indicators.append("DMARC_FAIL")
+                else:
+                    info_indicators.append("DMARC_NOT_CONFIGURED")
         
         if header_analysis.get('from_mismatch'):
             spoofing_indicators.append("FROM_RETURN_PATH_MISMATCH")
@@ -233,7 +248,11 @@ async def analyze_email(request: EmailAnalysisRequest, background_tasks: Backgro
         if header_analysis.get('reply_to_mismatch'):
             spoofing_indicators.append("REPLY_TO_MISMATCH")
 
-        # Reguły nadrzędne: wskaźniki spoofingu z nagłówków wymuszają podejrzany status
+        all_indicators = spoofing_indicators + info_indicators
+
+        # Reguły nadrzędne: TYLKO silne wskaźniki (aktywne fałszerstwo)
+        # wymuszają podejrzany status. Brak DKIM/DMARC/SPF jest jedynie
+        # informacją — wiele legalnych domen nie ma ich skonfigurowanych.
         if spoofing_indicators and not prediction['is_suspicious']:
             prediction['is_suspicious'] = True
             if prediction['risk_level'] == 'LOW':
@@ -252,7 +271,7 @@ async def analyze_email(request: EmailAnalysisRequest, background_tasks: Backgro
                 email_data,
                 prediction,
                 authentication_results,
-                spoofing_indicators
+                all_indicators
             )
         
         # Aktualizuj statystyki
@@ -264,7 +283,7 @@ async def analyze_email(request: EmailAnalysisRequest, background_tasks: Backgro
             confidence=prediction['confidence'],
             risk_level=prediction['risk_level'],
             recommendation=prediction['recommendation'],
-            spoofing_indicators=spoofing_indicators,
+            spoofing_indicators=all_indicators,
             authentication=authentication_results,
             header_analysis=header_analysis,
             timestamp=datetime.now().isoformat(),
