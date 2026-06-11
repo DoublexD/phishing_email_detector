@@ -93,3 +93,12 @@ temp/
 README.md
 *.md
 
+# Diploma thesis (keep local-only)
+praca-dyplomowa-latex/
+praca-dyplomowa-typst/
+praca-dyplomowa-wit/
+praca-dyplomowa-wit-final/
+praca-dyplomowa-latex.zip
+praca-dyplomowa-wit-final.zip
+szablonwitpd.zip
+
