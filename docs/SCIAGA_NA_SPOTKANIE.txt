@@ -1,0 +1,206 @@
+================================================================================
+  SCIAGA NA SPOTKANIE Z PROMOTOREM — AKTUALNY STAN PRACY
+  Email Spoofing Detector (praca inzynierska)
+================================================================================
+
+CEL SPOTKANIA:
+- pokazac postep
+- uzgodnic co zostalo do zrobienia
+- wybic z gory ew. zarzuty (lepiej teraz niz na obronie)
+- zlapac decyzje o terminach
+
+
+================================================================================
+ 1. STATUS PRACY (mow w tej kolejnosci, krotko)
+================================================================================
+
+PROGRAM:
++ caly pipeline dziala end-to-end (parser -> naglowki -> SPF/DKIM/DMARC ->
+  cechy -> ensemble RF+IF -> reguly -> alert)
++ REST API (FastAPI) z dokumentacja Swagger
++ panel webowy (HTML/CSS/JS) z 4 zakladkami
++ monitor IMAP w osobnym watku
++ persystencja: pliki JSON (alerty, statystyki) + modele .joblib
++ testy jednostkowe, integracyjne, wydajnosciowe (pytest + pytest-benchmark + Locust)
+
+PRACA PISEMNA (Typst):
++ Wstep                  — GOTOWE
++ Rozdzial 1 Wprowadzenie — GOTOWE (SPF, DKIM, DMARC, istniejace rozwiazania, ML)
++ Rozdzial 3 Implementacja — GOTOWE (parser, naglowki, auth, cechy, modele, API, panel, IMAP)
+- Rozdzial 2 Architektura — TYLKO NAGLOWKI (brak diagramow)
+- Rozdzial 4 Testy i wyniki — TYLKO NAGLOWKI (brak konkretnych liczb)
+- Rozdzial 5 Podsumowanie — TYLKO NAGLOWKI
+
+DO ZROBIENIA:
+- 2 diagramy: komponentow + przeplywu danych (rozdz. 2)
+- wykresy: feature importance + macierz pomylek (rozdz. 4)
+- opis zbioru danych: ile wiadomosci, skad pochodza, podzial klas (rozdz. 4)
+- konkretne liczby z treningu: precision/recall/F1/ROC AUC (rozdz. 4)
+- studium przypadku phishingowej wiadomosci (rozdz. 4)
+
+
+================================================================================
+ 2. CO MOZE PYTAC PROMOTOR + GOTOWE ODPOWIEDZI
+================================================================================
+
+P: Dlaczego Random Forest, a nie XGBoost / SVM / siec neuronowa?
+O: Dane sa tabelaryczne, mam ~60 cech mieszanych (binarne, ciagle, kategoryczne).
+   RF dobrze radzi sobie z takimi danymi bez intensywnego preprocessingu.
+   Daje atrybut feature_importances_ — wazne dla pracy o BEZPIECZENSTWIE,
+   bo recenzent moze zobaczyc CZEMU model uznal cos za phishing.
+   XGBoost wymaga wiekszego strojenia, SNN potrzebuje wiecej danych,
+   SVM gorzej skaluje sie na wiekszych zbiorach.
+
+P: Po co Isolation Forest skoro masz Random Forest?
+O: RF uczy sie ZNANYCH wzorcow phishingu. Isolation Forest wyłapuje
+   wiadomosci ODSTAJACE — takie, ktorych podobnych nie bylo w danych
+   treningowych. Dziala bez etykiet (unsupervised). Razem daja
+   szersze pokrycie: znane + niespotykane.
+
+P: Skad zbior danych?
+O: [TU MUSISZ MIEC ODPOWIEDZ — SpamAssassin Public Corpus? Enron? Wlasne?
+   Pamietaj: rozmiar zbioru, proporcja klas, czy byly dane polskie czy tylko EN]
+
+P: Jakie sa wyniki modelu? (NAJWAZNIEJSZE PYTANIE)
+O: [LICZBY z models/evaluation_results.json — naucz sie na pamiec:
+    accuracy, precision, recall, F1, ROC AUC. Macierz pomylek.
+    Jezeli jeszcze nie trenowales finalnie — powiedz wprost ze
+    final training jest w toku, masz wyniki preliminary]
+
+P: Czym sie rozni Twoj system od Microsoft Defender / Gmail / SpamAssassin?
+O: Defender i Gmail to czarne skrzynki — nie wiadomo CZEMU cos uznaly
+   za phishing. Moj system zwraca INTERPRETOWALNY raport ze wskaznikami
+   spoofingu i wyjasnieniem decyzji. SpamAssassin filtruje spam ogolnie,
+   ja celuje konkretnie w spoofing nagłowkowy + ML. I dziala jako
+   niezalezny mikroserwis REST API — niezalezny od dostawcy poczty.
+
+P: Czy program faktycznie analizuje SPOOFING (czyli to co w tytule)?
+O: Tak. Analiza nagłowkow + SPF/DKIM/DMARC to wprost wykrywanie spoofingu
+   nadawcy. Wektor cech zawiera m.in. from_display_name_spoofing,
+   from_return_path_mismatch, dmarc_alignment. Model ML dodatkowo
+   wzmacnia decyzje na podstawie zbiorczego wzorca.
+
+P: Co dodawalo zlozonosci — co bylo najtrudniejsze?
+O: 1) Dobor progow decyzyjnych — domyslny 0.5 dziala slabo przy
+      niezbalansowanych klasach. Robie kalibracje na osobnym zbiorze.
+   2) Unikniecie data leakage w SMOTE — SMOTE jest stosowany dopiero
+      WEWNATRZ foldow cross-validation, nie globalnie.
+   3) Reguly bezpieczenstwa po klasyfikatorze — np. TRUSTED_SENDER_DOMAINS
+      mogace obnizyc false positive dla wielkich dostawcow.
+
+P: Co dalej? Co byloby do rozwoju?
+O: Wieksza baza danych (zwlaszcza polskich phishingow),
+   real-time przez SMTP-proxy zamiast IMAP-polling,
+   tlumaczenie/embedding tresci (LLM/BERT) dla glębszej analizy semantyki,
+   GUI rozbudowane o filtry, eksport raportow do SIEM.
+
+
+================================================================================
+ 3. LICZBY/FAKTY NA PAMIEC (do przygotowania PRZED spotkaniem!)
+================================================================================
+
+- liczba cech wejsciowych modelu:           ~60
+- liczba drzew Random Forest:               200
+- maksymalna glebokosc drzewa:              20
+- proporcja podzialu train/test:            80/20
+- liczba foldow cross-validation:           5 (StratifiedKFold)
+- wagi ensemble:                            RF=0.75, IF=0.25
+- prog decyzyjny:                           dobierany 0.3-0.8 co 0.02
+- check_interval IMAP:                      60 sekund
+- liczba endpointow API:                    ~12
+
+DO UZUPELNIENIA (sprawdz w models/evaluation_results.json):
+- liczba wiadomosci w zbiorze:              ???
+- proporcja klas (legit/phishing):          ??? / ???
+- accuracy:                                 ???
+- precision:                                ???
+- recall:                                   ???
+- F1-score:                                 ???
+- ROC AUC:                                  ???
+
+
+================================================================================
+ 4. PYTANIA DO PROMOTORA (zapisz na koniec)
+================================================================================
+
+ORGANIZACYJNE:
+- Termin oddania pracy?
+- Czy Typst jest akceptowany przez dziekanat, czy musi byc Word/PDF z LaTeX?
+- Kiedy obrona (przyblizona data)?
+- Czy potrzebne sa zewnetrzne recenzje?
+- System antyplagiat — kiedy i jaki?
+
+MERYTORYCZNE:
+- Czy struktura 5 rozdzialow wystarcza, czy potrzebny jest jeszcze rozdzial
+  z wymaganiami funkcjonalnymi/niefunkcjonalnymi?
+- Czy zbior danych powinien byc wiekszy?
+  Ile probek to absolutne minimum dla pracy inzynierskiej?
+- Czy diagramy maja byc UML (zgodne ze standardem) czy moga byc uproszczone?
+- Czy testy wydajnosciowe (Locust, benchmark) sa wymagane czy mile widziane?
+- Czy aspekt RODO/prywatnosci (przechowywanie hasel IMAP w configu) trzeba
+  poruszyc w pracy?
+- Czy mam dodac sekcje "Wymagania" do pracy, czy traktowac to jako element
+  podsumowania?
+
+PYTANIA O OBRONE:
+- Ile czasu na prezentacje?
+- Czy mozna pokazac live demo?
+- Czego sie spodziewac w pytaniach komisji?
+
+
+================================================================================
+ 5. SLABE STRONY PROJEKTU — co przyznac, czego bronic
+================================================================================
+
+PRZYZNAC OD RAZU (zanim ktos znajdzie):
+- Zbior danych jest ograniczony, glownie anglojezyczny
+- Brak prawdziwych mailow polskich phishingow (etyka pozyskiwania)
+- Modele wytrenowane na probkach historycznych — mozliwy drift w czasie
+- Persystencja w plikach JSON to rozwiazanie prototypowe; w produkcji
+  potrzeba bazy danych
+- Hasla IMAP w pliku konfiguracyjnym — w produkcji powinny byc w
+  secret managerze (Vault / env-vars)
+
+BRONIC SIE PRZED:
+- "To tylko SPF/DKIM/DMARC — kazdy to ma"
+  -> NIE. Te trzy to fundament, ale system dodaje:
+     - analize NAGLOWKOW (anomalie, mismatch From/Reply-To)
+     - 60 cech wykraczajacych poza autentykacje
+     - ensemble dwoch modeli ML
+     - interpretowalny raport
+     - reguly post-klasyfikacyjne
+  Defender/Gmail tez tak robia, ale sa zamknieta czarna skrzynka.
+
+- "ML jest niepotrzebny, wystarczy SPF"
+  -> NIE. Atakujacy moze WYSLAC z legalnej, dobrze skonfigurowanej
+     domeny i SPF/DKIM/DMARC przejda PASS. Wtedy decyduje analiza
+     tresci+naglowkow + ML.
+
+- "Dlaczego tytul mowi SPOOFING a robisz tez PHISHING?"
+  -> Spoofing i phishing czesto wystepuja razem (przyklad: fake bank).
+     Pipeline jest ten sam: wykrywanie podszywania sie + szerszych
+     sygnalow oszustwa. Tytul mozna ewentualnie doprecyzowac.
+
+
+================================================================================
+ 6. JESLI BEDZIE CZAS — DEMO
+================================================================================
+
+ETAPY (4 minuty maks):
+1) terminal: uvicorn dziala, pokazac /docs (Swagger)
+2) panel: zakladka Analizuj, wkleic sample_phishing.eml -> wynik z risk_level
+3) panel: zakladka Alerty -> lista wczesniej wykrytych
+4) panel: zakladka Statystyki -> liczniki + metryki modeli
+
+
+================================================================================
+ 7. JEDEN SLAJD MENTALNY (jak sie zatniesz)
+================================================================================
+
+"System lączy 3 warstwy: standardy poczty (SPF/DKIM/DMARC),
+ analize naglowkow pod katem anomalii, oraz ensemble Random Forest
+ i Isolation Forest. Calosc wystawiona jako REST API z panelem
+ webowym i automatycznym monitorem IMAP. Zwraca interpretowalny
+ raport — nie czarna skrzynke."
+
+================================================================================

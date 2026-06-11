@@ -1,0 +1,27 @@
+From: "DPD Polska" <powiadomienia@dpd.com.pl>
+Return-Path: <noreply@dpd.com.pl>
+To: odbiorca@example.com
+Subject: Paczka PL563102056PL czeka w paczkomacie
+Date: Sat, 25 Apr 2026 14:32:05 +0200
+Message-ID: <e8d5e0632a1b4d438b8feebc03defc65@dpd.com.pl>
+X-Mailer: SendGrid
+Received: from o1.email.dpd.com.pl ([90.169.217.33]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=dpd.com.pl; dkim=pass header.d=dpd.com.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Witaj,
+
+Twoja paczka jest gotowa do odbioru.
+
+- Numer paczki: PL563102056PL
+- Lokalizacja: Paczkomat WAW86M, Łódź
+- Kod odbioru zostanie wysłany SMS-em
+- Czas na odbiór: 48 godzin
+
+Adres do nawigacji oraz status przesyłki dostępne są w aplikacji
+DPD Polska (sklepy Google Play i App Store).
+
+Dziękujemy za wybór naszych usług.
+DPD Polska

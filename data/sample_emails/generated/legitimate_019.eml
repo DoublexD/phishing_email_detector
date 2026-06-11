@@ -1,0 +1,30 @@
+From: "Vinted" <powiadomienia@vinted.pl>
+Return-Path: <bounce@vinted.pl>
+To: kupujacy@example.com
+Subject: Vinted: Potwierdzenie zamówienia #357109965
+Date: Wed, 20 May 2026 09:10:05 +0200
+Message-ID: <5f92e38155564f96993cecebbad79c98@vinted.pl>
+X-Mailer: Mailjet
+Received: from mta.vinted.pl (mta.vinted.pl [31.187.124.210]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=vinted.pl; dkim=pass header.d=vinted.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Cześć,
+
+Dziękujemy za zakup w serwisie Vinted!
+
+Szczegóły zamówienia:
+- Numer: 357109965
+- Kwota: 494,30 zł
+- Status: Opłacone
+- Szacowana dostawa: 29.05.2026
+
+Status zamówienia możesz śledzić w zakładce „Moje zakupy" po zalogowaniu.
+
+Pamiętaj o ocenie sprzedawcy po otrzymaniu przesyłki - pomaga to budować
+zaufaną społeczność użytkowników.
+
+Pozdrawiamy,
+Zespół Vinted

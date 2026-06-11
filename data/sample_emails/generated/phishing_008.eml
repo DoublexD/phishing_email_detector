@@ -1,0 +1,26 @@
+From: "UPS Polska Powiadomienia" <powiadomienia@ups-pl.buzz>
+Reply-To: noreply@ups-pl.buzz
+Return-Path: <noreply@ups-pl.buzz>
+To: odbiorca@example.com
+Subject: Twoja przesyłka wymaga potwierdzenia adresu
+Date: Sat, 25 Apr 2026 22:27:05 +0200
+Message-ID: <7022aa1d9caa4a57bbe4819c72303366@ups-pl.buzz>
+X-Mailer: PHPMailer 6.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Witaj,
+
+Twoja przesyłka o numerze PL213321496XX została wstrzymana w naszej sortowni
+w Bydgoszcz z powodu niedopłaty w wysokości 12,81 zł.
+
+Aby kontynuować doręczenie, opłać brakującą kwotę online:
+https://ups-pl.buzz/auth
+
+Czas na opłatę: 48 godzin. Po tym okresie przesyłka zostanie zwrócona
+do nadawcy, a Ty otrzymasz powiadomienie o kosztach magazynowania.
+
+Wybierz wygodny termin doręczenia po opłaceniu.
+
+UPS Polska

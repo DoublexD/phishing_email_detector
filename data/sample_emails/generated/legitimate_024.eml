@@ -1,0 +1,30 @@
+From: "OLX" <powiadomienia@olx.pl>
+Return-Path: <bounce@olx.pl>
+To: kupujacy@example.com
+Subject: OLX: Potwierdzenie zamówienia #172370545
+Date: Thu, 30 Apr 2026 13:36:05 +0200
+Message-ID: <9a7ae4ec3b004355ac376d14f5ca08f6@olx.pl>
+X-Mailer: Mailjet
+Received: from mta.olx.pl (mta.olx.pl [70.71.171.126]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=olx.pl; dkim=pass header.d=olx.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Cześć,
+
+Dziękujemy za zakup w serwisie OLX!
+
+Szczegóły zamówienia:
+- Numer: 172370545
+- Kwota: 277,42 zł
+- Status: Opłacone
+- Szacowana dostawa: 25.05.2026
+
+Status zamówienia możesz śledzić w zakładce „Moje zakupy" po zalogowaniu.
+
+Pamiętaj o ocenie sprzedawcy po otrzymaniu przesyłki - pomaga to budować
+zaufaną społeczność użytkowników.
+
+Pozdrawiamy,
+Zespół OLX

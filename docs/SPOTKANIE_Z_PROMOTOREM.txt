@@ -1,0 +1,135 @@
+================================================================================
+  PIERWSZE SPOTKANIE Z PROMOTOREM — O CZYM OPOWIEDZIEĆ O PROGRAMIE
+  (Email Spoofing / Phishing Detector)
+================================================================================
+
+Cel: w 10–15 minutach zarysować, CO robisz, GDZIE to w projekcie leży
+oraz JAK dane przepływają przez system. Poniżej gotowe zdania i kolejność.
+
+
+--------------------------------------------------------------------------------
+1. START (jedno zdanie + kontekst)
+--------------------------------------------------------------------------------
+
+  „Pracuję nad systemem wykrywania spoofingu i phishingu w poczcie
+   elektronicznej. Łączę sprawdzanie zgodne ze standardami poczty
+   (SPF, DKIM, DMARC), analizę nagłówków pod kątem anomalii oraz klasyfikację
+   uczenia maszynowego — ensemble Random Forest i Isolation Forest.”
+
+  „Warstwa operatorska to REST API w Pythonie (FastAPI) i prosty panel
+   w przeglądarce; alerty i statystyki mogę też trzymać w plikach JSON.”
+
+
+--------------------------------------------------------------------------------
+2. GDZIE CO JEST (mapa katalogów — wskaż palcem lub na slajdzie)
+--------------------------------------------------------------------------------
+
+  src/
+    api/app.py              → całe REST API (endpointy, orchestracja)
+    email_parser/           → parsowanie .eml / surowego RFC822, IMAP
+      parser.py, header_analyzer.py, imap_client.py
+    authentication/         → SPF, DKIM, DMARC (osobne moduły)
+    feature_extraction/
+      extractor.py          → wektor cech liczbowych dla ML (~60+ cech)
+    ml_models/
+      train.py              → trening modeli, zapis do models/
+      predict.py            → klasyfikacja na podstawie cech
+      model_manager.py      → wersjonowanie / metadane modeli
+
+  frontend/                 → index.html, app.js, style.css (panel bez frameworka)
+
+  models/                   → wytrenowane .joblib (RF, IF, scaler, nazwy cech,
+                              konfiguracja progów)
+
+  data/
+    raw/ham, raw/spam       → surowe maile pod zbiór treningowy
+    processed/training_data.csv → CSV po przygotowaniu danych
+    alerts.json, stats.json → stan aplikacji w czasie działania
+
+  scripts/                  → setup, prepare_dataset, train_models, run_api,
+                              full_demo itd.
+
+  tests/                    → testy jednostkowe modułów i API
+
+  config/config.yaml        → konfiguracja (po skopiowaniu z .example)
+
+
+--------------------------------------------------------------------------------
+3. JAK TO DZIAŁA (pipeline — mów po kolei)
+--------------------------------------------------------------------------------
+
+  Krok 1 — Wejście
+    Wiadomość trafia przez POST /api/analyze (tekst surowej poczty lub base64)
+    albo z monitora IMAP (jeśli włączony).
+
+  Krok 2 — Parsowanie
+    Moduł email_parser zamienia surowy mail na ustrukturyzowany słownik:
+    nadawca, odbiorcy, temat, treść, załączniki, linki.
+
+  Krok 3 — Nagłówki
+    header_analyzer szuka sygnałów manipulacji (np. niezgodności From/Reply-To).
+
+  Krok 4 — Autentykacja nadawcy (opcjonalnie w żądaniu)
+    SPF / DKIM / DMARC przez DNS — czy nadawca jest „uprawniony” do domeny.
+
+  Krok 5 — Cechy pod ML
+    extractor buduje jeden wektor liczbowy (m.in. tekst, URL, nagłówki, wyniki auth).
+
+  Krok 6 — Klasyfikacja
+    predict ładuje modele z models/: skalowanie (scaler), RF + IF,
+    agregacja (ensemble z wagami i progami z model_config).
+    Gdy brak modeli — możliwy tryb heurystyczny (fallback).
+
+  Krok 7 — Decyzja i zapis
+    API może podnieść ryzyko przy mocnych sygnałach spoofingu (reguły nadrzędne).
+    Przy wykryciu zagrożenia — alert zapisuje się np. do data/alerts.json,
+    statystyki do data/stats.json.
+
+  Panel (frontend) tylko woła API: alerty, analiza ręczna, statystyki, info o modelach.
+
+
+--------------------------------------------------------------------------------
+4. STACK TECHNOLOGICZNY (jeśli promotor pyta „na czym to stoi”)
+--------------------------------------------------------------------------------
+
+  Backend: Python 3.10+, FastAPI, Uvicorn, Pydantic
+  ML: scikit-learn (Random Forest, Isolation Forest), pandas, numpy, joblib,
+      opcjonalnie SMOTE (imbalanced-learn)
+  DNS / poczta: dnspython, pyspf, dkimpy, checkdmarc
+  Frontend: HTML, CSS, JS (bez React/Vue)
+  Testy: pytest
+
+
+--------------------------------------------------------------------------------
+5. PRACA INŻYNIERSKA vs PRACA MAGISTERSKA (krótka uwaga na koniec)
+--------------------------------------------------------------------------------
+
+  Możesz powiedzieć wprost:
+  „Po stronie inżynierskiej mam działający pipeline: dane → cechy → modele → API.
+   Rozdziały merytoryczne pracy — np. pełna ewaluacja, porównanie modeli,
+   omówienie metryk i ograniczeń SPF/DKIM w praktyce, aspekty false positive —
+   chciałbym doprecyzować z Panem/Panią na kolejnych spotkaniach.”
+
+
+--------------------------------------------------------------------------------
+6. DEMO (jeśli masz laptop — jedna ścieżka)
+--------------------------------------------------------------------------------
+
+  Uruchomione API (localhost:8000), /docs — Swagger.
+  frontend/index.html w przeglądarce → zakładka „Analiza”, wklejenie próbki .eml.
+  Opcjonalnie: pokaż katalog models/ i jeden plik evaluation_results.json jako
+  podsumowanie jakości treningu.
+
+
+--------------------------------------------------------------------------------
+7. PYTANIA DO PROMOTORA (warto zabrać na koniec)
+--------------------------------------------------------------------------------
+
+  - Zakres pracy: co jest „must have”, a co mile widziane jako rozszerzenie?
+  - Formalności: szablon pracy, termin obrony, recenzje, system antyplagiatowy.
+  - Literatura: kluczowe pozycje (RFC SPF/DKIM/DMARC, phishing detection surveys).
+
+
+================================================================================
+  Powodzenia na spotkaniu.
+================================================================================

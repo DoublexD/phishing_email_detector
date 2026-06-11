@@ -1,0 +1,27 @@
+From: "Poczta Polska" <powiadomienia@poczta-polska.pl>
+Return-Path: <noreply@poczta-polska.pl>
+To: odbiorca@example.com
+Subject: Paczka IP399085574XX czeka w paczkomacie
+Date: Sun, 03 May 2026 19:10:05 +0200
+Message-ID: <f196995571104a3a82eeae7ab014d7a2@poczta-polska.pl>
+X-Mailer: SendGrid
+Received: from o1.email.poczta-polska.pl ([216.220.219.142]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=poczta-polska.pl; dkim=pass header.d=poczta-polska.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Witaj,
+
+Twoja paczka jest gotowa do odbioru.
+
+- Numer paczki: IP399085574XX
+- Lokalizacja: Paczkomat WAW32M, Kraków
+- Kod odbioru zostanie wysłany SMS-em
+- Czas na odbiór: 48 godzin
+
+Adres do nawigacji oraz status przesyłki dostępne są w aplikacji
+Poczta Polska (sklepy Google Play i App Store).
+
+Dziękujemy za wybór naszych usług.
+Poczta Polska

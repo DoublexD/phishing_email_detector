@@ -1,0 +1,30 @@
+From: "Allegro" <powiadomienia@allegro.pl>
+Return-Path: <bounce@allegro.pl>
+To: kupujacy@example.com
+Subject: Allegro: Potwierdzenie zamówienia #264112119
+Date: Sun, 26 Apr 2026 19:45:05 +0200
+Message-ID: <6fd7f3d09d9c4770afb4cb2925d2ae50@allegro.pl>
+X-Mailer: Mailjet
+Received: from mta.allegro.pl (mta.allegro.pl [26.98.97.154]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=allegro.pl; dkim=pass header.d=allegro.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Cześć,
+
+Dziękujemy za zakup w serwisie Allegro!
+
+Szczegóły zamówienia:
+- Numer: 264112119
+- Kwota: 1330,87 zł
+- Status: Opłacone
+- Szacowana dostawa: 28.05.2026
+
+Status zamówienia możesz śledzić w zakładce „Moje zakupy" po zalogowaniu.
+
+Pamiętaj o ocenie sprzedawcy po otrzymaniu przesyłki - pomaga to budować
+zaufaną społeczność użytkowników.
+
+Pozdrawiamy,
+Zespół Allegro

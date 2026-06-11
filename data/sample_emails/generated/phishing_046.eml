@@ -1,0 +1,26 @@
+From: "PKO Bank Polski - Bezpieczeństwo" <obsluga@pko.cyou>
+Reply-To: noreply@contact-konto.cyou
+Return-Path: <bounce@pko.cyou>
+To: klient@example.com
+Subject: PKO Bank Polski: Twoje konto zostało zablokowane
+Date: Tue, 12 May 2026 07:36:05 +0200
+Message-ID: <f4dc6fbc54b34227841ad123e28b30fa@pko.cyou>
+X-Mailer: PHPMailer 5.2.9
+Received: from unknown (54.154.39.196) by mail.example.com
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+POTWIERDŹ TRANSAKCJĘ
+
+Wykryto autoryzację płatności:
+- Kwota: 3597,13 zł
+- Odbiorca: SHOP-PAYMENTS LTD
+- Data: 2026-05-23 23:11
+
+Jeżeli NIE autoryzowałeś tej transakcji, anuluj ją natychmiast:
+>>> https://pko.cyou/verify <<<
+
+Po 30 minutach środki zostaną pobrane bezpowrotnie.
+
+Dział Bezpieczeństwa PKO Bank Polski

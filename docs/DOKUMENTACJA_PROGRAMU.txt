@@ -1,0 +1,1447 @@
+================================================================================
+          DOKUMENTACJA PROGRAMU: EMAIL SPOOFING DETECTOR
+                         Wersja 1.0.0
+================================================================================
+
+
+SPIS TRESCI
+-----------
+  1. Cel i opis systemu
+  2. Wymagania systemowe
+  3. Instalacja i uruchomienie
+  4. Struktura projektu
+  5. Architektura systemu
+  6. Modul: Parsowanie e-mail (email_parser)
+  7. Modul: Weryfikacja autentykacji (authentication)
+  8. Modul: Ekstrakcja cech (feature_extraction)
+  9. Modul: Modele uczenia maszynowego (ml_models)
+ 10. Modul: Narzedzia pomocnicze (utils)
+ 11. REST API - endpointy
+ 12. Frontend - panel operatora
+ 13. Pipeline przetwarzania e-maila
+ 14. Monitorowanie IMAP
+ 15. Trening modeli ML
+ 16. Konfiguracja systemu
+ 17. Skrypty pomocnicze
+ 18. Testy
+ 19. Dane i artefakty
+ 20. Ograniczenia i uwagi
+
+
+================================================================================
+1. CEL I OPIS SYSTEMU
+================================================================================
+
+Email Spoofing Detector to system wykrywania spoofingu i phishingu w
+wiadomosciach e-mail. Laczy podejscie regolowe (weryfikacja SPF, DKIM, DMARC,
+analiza naglowkow) z uczeniem maszynowym (Random Forest + Isolation Forest).
+
+System oferuje:
+- Analiza pojedynczych wiadomosci e-mail przez REST API
+- Weryfikacja autentykacji nadawcy (SPF, DKIM, DMARC)
+- Analiza naglowkow pod katem anomalii i manipulacji
+- Klasyfikacja z wykorzystaniem modeli ML (ensemble)
+- Klasyfikacja heurystyczna jako fallback bez wytrenowanych modeli
+- Ciagle monitorowanie skrzynki IMAP
+- Panel webowy do zarzadzania alertami i przegladania statystyk
+- System alertow z persystencja do plikow JSON
+- Wersjonowanie i zarzadzanie modelami ML
+
+Technologie:
+- Backend: Python 3.10+, FastAPI, scikit-learn, imbalanced-learn
+- Frontend: HTML5, CSS3, JavaScript (vanilla)
+- Autentykacja e-mail: pyspf, dkimpy, checkdmarc, dnspython
+- Serwer ASGI: Uvicorn
+
+
+================================================================================
+2. WYMAGANIA SYSTEMOWE
+================================================================================
+
+2.1. OPROGRAMOWANIE
+-------------------
+- Python 3.10 lub nowszy
+- pip (menedzer pakietow Pythona)
+- System operacyjny: Windows 10/11, Linux, macOS
+
+2.2. ZALEZNOSCI PYTHONA (requirements.txt)
+------------------------------------------
+
+Glowne:
+  - fastapi 0.104.1          - framework webowy (REST API)
+  - uvicorn 0.24.0           - serwer ASGI
+  - pydantic 2.5.0           - walidacja danych (modele request/response)
+
+Przetwarzanie e-mail:
+  - dnspython >=2.4.0        - zapytania DNS (SPF, DKIM, DMARC)
+  - pyspf >=2.0.14           - weryfikacja SPF
+  - dkimpy >=1.1.0           - weryfikacja DKIM
+  - checkdmarc >=4.8.0       - weryfikacja DMARC
+  - email-validator >=2.1.0  - walidacja adresow e-mail
+
+Uczenie maszynowe:
+  - scikit-learn >=1.3.0     - modele ML (Random Forest, Isolation Forest)
+  - numpy >=1.24.0,<2.0.0   - obliczenia numeryczne
+  - pandas >=2.0.0           - struktury danych (DataFrame)
+  - joblib >=1.3.0           - serializacja modeli
+  - imbalanced-learn >=0.11.0 - balansowanie danych (SMOTE)
+
+Pozostale:
+  - pyyaml >=6.0.0           - odczyt konfiguracji YAML
+  - python-json-logger >=2.0.0 - logowanie w formacie JSON
+  - tldextract >=5.0.0       - ekstrakcja domen z URL
+  - python-dateutil >=2.8.0  - parsowanie dat
+
+Testowanie:
+  - pytest >=7.4.0           - framework testowy
+  - pytest-asyncio >=0.21.0  - testy asynchroniczne
+  - pytest-cov >=4.1.0       - pokrycie kodu
+  - faker >=20.0.0           - generowanie danych testowych
+
+
+================================================================================
+3. INSTALACJA I URUCHOMIENIE
+================================================================================
+
+3.1. SZYBKI START (WINDOWS - PowerShell)
+----------------------------------------
+
+  Krok 1: Instalacja srodowiska
+  > .\scripts\setup.ps1
+
+  Krok 2: Pelnе demo (przygotowanie danych + trening + uruchomienie)
+  > .\scripts\full_demo.ps1
+
+  Lub krok po kroku:
+  > .\scripts\setup.ps1             # Instalacja zaleznosci
+  > python scripts\prepare_dataset.py  # Przygotowanie danych
+  > .\scripts\train_models.ps1      # Trening modeli
+  > .\scripts\run_api.ps1           # Uruchomienie API
+
+3.2. INSTALACJA RECZNA
+----------------------
+
+  # Utworz srodowisko wirtualne
+  python -m venv venv
+
+  # Aktywuj (Windows)
+  .\venv\Scripts\Activate.ps1
+
+  # Aktywuj (Linux/macOS)
+  source venv/bin/activate
+
+  # Zainstaluj zaleznosci
+  pip install -r requirements.txt
+
+  # Skopiuj konfiguracje
+  copy config\config.yaml.example config\config.yaml
+
+  # Utworz katalogi
+  mkdir data\raw data\processed data\sample_emails models logs
+
+3.3. URUCHOMIENIE API
+---------------------
+
+  # Ustaw PYTHONPATH
+  set PYTHONPATH=src                         # Windows CMD
+  $env:PYTHONPATH = "$PWD\src"               # Windows PowerShell
+  export PYTHONPATH=src                      # Linux/macOS
+
+  # Uruchom serwer
+  python -m uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload
+
+  API bedzie dostepne pod: http://localhost:8000
+  Dokumentacja Swagger UI:  http://localhost:8000/docs
+
+3.4. URUCHOMIENIE FRONTENDU
+---------------------------
+  Otworz plik frontend/index.html w przegladarce.
+  Frontend laczy sie z API na http://localhost:8000.
+
+
+================================================================================
+4. STRUKTURA PROJEKTU
+================================================================================
+
+  ataki phishing/
+  |
+  |-- config/
+  |   |-- config.yaml.example    # Przykladowa konfiguracja
+  |   +-- config.yaml            # Aktywna konfiguracja (tworzony przez setup)
+  |
+  |-- data/
+  |   |-- raw/                   # Surowe e-maile (SpamAssassin format)
+  |   |   |-- ham/               #   Bezpieczne wiadomosci
+  |   |   +-- spam/              #   Spam/phishing
+  |   |-- processed/             # Przetworzone dane
+  |   |   +-- training_data.csv  #   Gotowy zbior treningowy
+  |   |-- sample_emails/         # Przykladowe e-maile
+  |   |   |-- generated/         #   Wygenerowane automatycznie
+  |   |   |-- sample_legitimate.eml
+  |   |   +-- sample_phishing.eml
+  |   |-- alerts.json            # Persystencja alertow (runtime)
+  |   +-- stats.json             # Persystencja statystyk (runtime)
+  |
+  |-- frontend/
+  |   |-- index.html             # Strona glowna panelu
+  |   |-- app.js                 # Logika frontendu (JavaScript)
+  |   +-- style.css              # Style CSS
+  |
+  |-- models/
+  |   |-- random_forest_classifier.joblib   # Wytrenowany RF
+  |   |-- isolation_forest_anomaly.joblib   # Wytrenowany IF
+  |   |-- scaler.joblib                     # StandardScaler
+  |   |-- feature_names.joblib              # Nazwy cech
+  |   |-- model_config.joblib              # Konfiguracja (progi, wagi)
+  |   |-- evaluation_results.json           # Wyniki ewaluacji
+  |   +-- metadata.json                    # Metadane wersji modeli
+  |
+  |-- notebooks/
+  |   +-- exploratory_analysis.ipynb  # Notebook do analizy danych
+  |
+  |-- scripts/
+  |   |-- setup.ps1              # Instalacja (Windows)
+  |   |-- setup.sh               # Instalacja (Linux/macOS)
+  |   |-- run_api.ps1            # Uruchomienie API (Windows)
+  |   |-- run_api.sh             # Uruchomienie API (Linux/macOS)
+  |   |-- train_models.ps1       # Trening modeli
+  |   |-- train_models.sh        # Trening modeli (Linux/macOS)
+  |   |-- full_demo.ps1          # Pelne demo (caly pipeline)
+  |   |-- prepare_dataset.py     # Przygotowanie zbioru danych
+  |   |-- generate_sample_emails.py  # Generator przykladowych e-maili
+  |   |-- download_emails_imap.py    # Pobieranie e-maili z IMAP
+  |   |-- test.ps1               # Uruchamianie testow
+  |   |-- test_all_features.ps1  # Testy wszystkich funkcji
+  |   |-- test_phishing_detection.ps1  # Test detekcji phishingu
+  |   |-- kill_port.ps1          # Zamkniecie procesu na porcie
+  |   +-- open_frontend.ps1      # Otwarcie frontendu
+  |
+  |-- src/
+  |   |-- api/
+  |   |   +-- app.py             # Glowna aplikacja REST API
+  |   |-- authentication/
+  |   |   |-- spf_checker.py     # Weryfikacja SPF
+  |   |   |-- dkim_checker.py    # Weryfikacja DKIM
+  |   |   +-- dmarc_checker.py   # Weryfikacja DMARC
+  |   |-- email_parser/
+  |   |   |-- parser.py          # Parsowanie wiadomosci e-mail
+  |   |   |-- header_analyzer.py # Analiza naglowkow
+  |   |   +-- imap_client.py     # Klient IMAP
+  |   |-- feature_extraction/
+  |   |   +-- extractor.py       # Ekstrakcja cech dla modeli ML
+  |   |-- ml_models/
+  |   |   |-- train.py           # Trening modeli
+  |   |   |-- predict.py         # Predykcja (klasyfikacja)
+  |   |   +-- model_manager.py   # Zarzadzanie wersjami modeli
+  |   +-- utils/
+  |       +-- helpers.py         # Funkcje pomocnicze
+  |
+  |-- tests/
+  |   |-- test_api.py            # Testy REST API
+  |   |-- test_parser.py         # Testy parsera e-mail
+  |   |-- test_authentication.py # Testy SPF/DKIM/DMARC
+  |   |-- test_classifier.py     # Testy klasyfikatora
+  |   |-- test_feature_extractor.py  # Testy ekstrakcji cech
+  |   |-- test_header_analyzer.py    # Testy analizatora naglowkow
+  |   +-- test_train.py         # Testy treningu modeli
+  |
+  |-- requirements.txt           # Zaleznosci Pythona
+  +-- pyrightconfig.json         # Konfiguracja Pyright (type checking)
+
+
+================================================================================
+5. ARCHITEKTURA SYSTEMU
+================================================================================
+
+System sklada sie z 6 warstw:
+
+  +----------------------------------------------------------------+
+  |                   FRONTEND (panel operatora)                    |
+  |              HTML/CSS/JavaScript - frontend/                    |
+  +----------------------------------------------------------------+
+                               |
+                           HTTP/REST
+                               |
+  +----------------------------------------------------------------+
+  |                    WARSTWA API (FastAPI)                        |
+  |                    src/api/app.py                               |
+  |  Endpointy: /api/analyze, /api/alerts, /api/stats, ...        |
+  +----------------------------------------------------------------+
+       |              |               |                |
+       v              v               v                v
+  +---------+  +------------+  +-------------+  +------------+
+  | PARSER  |  |    AUTH     |  | EKSTRAKCJA  |  |   MODELE   |
+  | E-MAIL  |  | SPF/DKIM/  |  |    CECH     |  |     ML     |
+  |         |  |   DMARC    |  |             |  |            |
+  +---------+  +------------+  +-------------+  +------------+
+  |parser.py|  |spf_checker |  |extractor.py |  |predict.py  |
+  |header_  |  |dkim_checker|  |             |  |train.py    |
+  |analyzer |  |dmarc_      |  |             |  |model_      |
+  |imap_    |  |checker     |  |             |  |manager     |
+  |client   |  |            |  |             |  |            |
+  +---------+  +------------+  +-------------+  +------------+
+                     |                                |
+                     v                                v
+              +------------+                   +----------+
+              |    DNS     |                   | MODELE   |
+              | (rekordy   |                   | .joblib  |
+              |  TXT/SPF/  |                   | (dysk)   |
+              |  DKIM/DMARC|                   +----------+
+              +------------+
+
+  +----------------------------------------------------------------+
+  |               WARSTWA PERSYSTENCJI (JSON)                       |
+  |          data/alerts.json  |  data/stats.json                  |
+  +----------------------------------------------------------------+
+
+Przeplyw danych:
+  1. E-mail wchodzi przez API (POST /api/analyze) lub IMAP monitor
+  2. Parser ekstrahuje dane z wiadomosci (naglowki, tresc, zalaczniki)
+  3. HeaderAnalyzer wykrywa anomalie w naglowkach
+  4. Checkery SPF/DKIM/DMARC weryfikuja autentykacje nadawcy
+  5. FeatureExtractor tworzy wektor 60+ cech liczbowych
+  6. EmailClassifier (RF + IF ensemble) klasyfikuje wiadomosc
+  7. API stosuje regoly nadrzedne (silne wskazniki spoofingu)
+  8. Wynik zwracany do uzytkownika, alerty zapisywane na dysk
+
+
+================================================================================
+6. MODUL: PARSOWANIE E-MAIL (email_parser)
+================================================================================
+
+6.1. EmailParser (src/email_parser/parser.py)
+---------------------------------------------
+Klasa odpowiedzialna za parsowanie surowych wiadomosci e-mail do ustandaryzowanego
+slownika danych.
+
+Metody publiczne:
+
+  parse_raw_email(raw_email: bytes) -> Dict[str, Any]
+    Parsuje surowa wiadomosc z formatu bytes.
+    Wejscie: surowa wiadomosc e-mail jako bajty
+    Wyjscie: slownik z danymi e-maila
+
+  parse_email_string(email_string: str) -> Dict[str, Any]
+    Parsuje wiadomosc z formatu string (konwertuje do bytes i wywoluje
+    parse_raw_email).
+
+  extract_urls(text: str) -> List[str]
+    Ekstrahuje adresy URL z tekstu za pomoca wyrazen regularnych.
+
+  get_all_urls(email_data: Dict) -> List[str]
+    Ekstrahuje wszystkie unikalne URL z tresci wiadomosci (plain + html).
+
+Struktura danych wyjsciowych (slownik email_data):
+  {
+    'headers': dict          - Wszystkie naglowki (klucz -> wartosc)
+    'from': dict             - Nadawca {'name': str, 'email': str}
+    'to': list               - Odbiorcy [{'name': str, 'email': str}, ...]
+    'cc': list               - Kopia
+    'bcc': list              - Kopia ukryta
+    'subject': str           - Temat wiadomosci
+    'date': datetime|None    - Data wyslania
+    'message_id': str        - Identyfikator wiadomosci
+    'reply_to': dict         - Adres Reply-To {'name': str, 'email': str}
+    'return_path': str       - Return-Path (sciezka zwrotna)
+    'received': list         - Lista naglowkow Received (sparsowane)
+    'body': dict             - Tresc {'plain': str, 'html': str}
+    'attachments': list      - Zalaczniki [{'filename', 'content_type', 'size'}]
+    'authentication_results': str  - Naglowek Authentication-Results
+    'received_spf': str      - Naglowek Received-SPF
+    'dkim_signature': str    - Naglowek DKIM-Signature
+    'x_mailer': str          - Naglowek X-Mailer
+    'mime_version': str      - Wersja MIME
+    'content_type': str      - Typ zawartosci
+  }
+
+6.2. HeaderAnalyzer (src/email_parser/header_analyzer.py)
+---------------------------------------------------------
+Analizuje naglowki e-mail pod katem anomalii wskazujacych na spoofing.
+
+Metoda glowna:
+
+  analyze(email_data: Dict) -> Dict[str, Any]
+    Przeprowadza pelna analize naglowkow. Zwraca slownik z wynikami.
+
+Struktura wynikow:
+  {
+    'missing_headers': list      - Brakujace wymagane naglowki
+    'received_chain_analysis': dict  - Analiza lancucha Received
+    'time_anomalies': dict       - Anomalie czasowe
+    'suspicious_patterns': list  - Wykryte podejrzane wzorce
+    'from_mismatch': bool        - Niezgodnosc From vs Return-Path
+    'reply_to_mismatch': bool    - Niezgodnosc From vs Reply-To
+    'hop_count': int             - Liczba hopow (Received)
+    'anomaly_score': float       - Wynik anomalii (0.0 - 1.0)
+    'anomalies': list            - Lista opisow wykrytych anomalii
+  }
+
+Co sprawdza:
+  - Brakujace wymagane naglowki: From, Date, Message-ID, Received
+  - Zbyt wiele hopow (>10) lub brak hopow
+  - Opoznienia miedzy hopami (>3600s) i ujemne delty czasowe
+  - Data e-maila w przyszlosci lub starsza niz rok
+  - Podejrzane wzorce w X-Mailer (YahooMailClassic, IMO) i User-Agent
+    (curl, python, wget)
+  - Niezgodnosc domen From/Return-Path (wskaznik fałszowania nadawcy)
+  - Niezgodnosc domen From/Reply-To (wskaznik przekierowania odpowiedzi)
+
+Obliczanie anomaly_score (0.0 = brak anomalii, 1.0 = bardzo podejrzane):
+  - Brakujacy naglowek:         +0.15 za kazdy
+  - Niezgodnosc From/Return-Path: +0.25
+  - Niezgodnosc Reply-To:       +0.15
+  - Data w przyszlosci:         +0.20
+  - Podejrzany wzorzec:         +0.10 za kazdy
+  - Zbyt wiele hopow (>10):    +0.15
+  - Brak hopow (<1):           +0.20
+
+6.3. IMAPClient (src/email_parser/imap_client.py)
+-------------------------------------------------
+Klient do laczenia z serwerem IMAP i pobierania wiadomosci e-mail.
+
+Metody publiczne:
+
+  connect() -> bool
+    Nawiazuje polaczenie z serwerem IMAP (SSL lub bez).
+
+  disconnect()
+    Rozlacza z serwerem.
+
+  fetch_new_emails(mark_as_seen: bool = False) -> List[bytes]
+    Pobiera nowe wiadomosci od ostatniego sprawdzenia.
+    Przy pierwszym wywolaniu zapamiętuje istniejace UID bez pobierania.
+    Kolejne wywolania zwracaja tylko nowe wiadomosci.
+
+  fetch_all_emails(limit: int = None) -> List[bytes]
+    Pobiera wszystkie wiadomosci z folderu (z opcjonalnym limitem).
+
+  monitor_continuous(callback, interval=60, max_iterations=None)
+    Monitoruje folder w trybie ciaglym z zadanym interwalem.
+
+  get_folder_list() -> List[str]
+    Zwraca liste folderow na serwerze.
+
+Obsluguje context manager (with IMAPClient(...) as client:).
+
+
+================================================================================
+7. MODUL: WERYFIKACJA AUTENTYKACJI (authentication)
+================================================================================
+
+7.1. SPFChecker (src/authentication/spf_checker.py)
+----------------------------------------------------
+Sprawdza rekordy SPF (Sender Policy Framework) - weryfikuje, czy serwer
+nadawcy jest autoryzowany do wysylania poczty w imieniu domeny.
+
+Metody publiczne:
+
+  check_spf(sender_ip, sender_email, helo_domain=None) -> Dict
+    Wykonuje pelne sprawdzenie SPF dla podanego IP i adresu e-mail.
+    Wynik: pass, fail, softfail, neutral, none, temperror, permerror
+
+  check_from_email_data(email_data: Dict) -> Dict
+    Automatycznie wyciaga IP nadawcy z naglowkow Received i wykonuje
+    sprawdzenie SPF.
+
+  get_spf_record(domain: str) -> str|None
+    Pobiera rekord SPF (TXT) z DNS dla domeny.
+
+  parse_spf_record(spf_record: str) -> Dict
+    Parsuje rekord SPF na mechanizmy, modyfikatory i polityke 'all'.
+
+Wyniki SPF:
+  pass     - serwer autoryzowany (weryfikacja pomyslna)
+  fail     - serwer NIE autoryzowany (aktywny wskaznik spoofingu!)
+  softfail - serwer prawdopodobnie nie autoryzowany (slabszy wskaznik)
+  neutral  - domena nie deklaruje polityki
+  none     - brak rekordu SPF
+
+7.2. DKIMChecker (src/authentication/dkim_checker.py)
+-----------------------------------------------------
+Sprawdza podpisy DKIM (DomainKeys Identified Mail) - weryfikuje integralnosc
+i autentycznosc wiadomosci za pomoca podpisu kryptograficznego.
+
+Metody publiczne:
+
+  check_dkim(raw_email: bytes) -> Dict
+    Weryfikuje podpis DKIM surowej wiadomosci.
+    Wynik: pass (valid=True), fail (valid=False), none, temperror
+
+  check_from_email_data(email_data: Dict, raw_email: bytes) -> Dict
+    Sprawdza DKIM - jesli wiadomosc nie ma podpisu, zwraca result='none'.
+
+  get_dkim_public_key(selector: str, domain: str) -> str|None
+    Pobiera klucz publiczny DKIM z DNS.
+
+7.3. DMARCChecker (src/authentication/dmarc_checker.py)
+-------------------------------------------------------
+Sprawdza polityki DMARC (Domain-based Message Authentication, Reporting &
+Conformance) - okresla, co robic z wiadomosciami, ktore nie przechodza SPF/DKIM.
+
+Metody publiczne:
+
+  check_dmarc(domain: str) -> Dict
+    Sprawdza polityke DMARC dla domeny.
+    Zwraca: valid, record, policy, subdomain_policy, alignment, reporting
+
+  check_from_email_data(email_data: Dict) -> Dict
+    Automatycznie wyciaga domene nadawcy i sprawdza DMARC.
+
+  check_alignment(spf_result, dkim_result, from_domain) -> Dict
+    Sprawdza alignment (zgodnosc) SPF i DKIM z wymaganiami DMARC.
+
+  get_policy_action(policy: str) -> str
+    Mapuje polityke DMARC na akcje: none->ALLOW, quarantine->QUARANTINE,
+    reject->REJECT
+
+Parsowane tagi DMARC:
+  p     - glowna polityka (none/quarantine/reject)
+  sp    - polityka dla subdomen
+  pct   - procent wiadomosci objety polityka
+  adkim - alignment DKIM (r=relaxed/s=strict)
+  aspf  - alignment SPF
+  rua   - adresy raportow agregowanych
+  ruf   - adresy raportow forensic
+
+
+================================================================================
+8. MODUL: EKSTRAKCJA CECH (feature_extraction)
+================================================================================
+
+FeatureExtractor (src/feature_extraction/extractor.py)
+------------------------------------------------------
+Przeksztalca dane e-maila i wyniki autentykacji na wektor cech liczbowych
+(pd.Series), ktorego uzywa model ML do klasyfikacji.
+
+Metoda glowna:
+
+  extract_features(email_data, spf_result, dkim_result, dmarc_result,
+                   header_analysis) -> pd.Series
+    Ekstrahuje wszystkie grupy cech i zwraca pd.Series z ~60 cechami.
+
+  extract_batch(email_data_list, **kwargs) -> pd.DataFrame
+    Ekstrahuje cechy z wielu wiadomosci naraz.
+
+GRUPY CECH (laczy 60+ cech liczbowych):
+
+  A) Cechy autentykacji (_extract_auth_features) - 13 cech:
+     spf_pass, spf_fail, spf_softfail, spf_neutral, spf_none
+     dkim_valid, dkim_invalid, dkim_none, dkim_signature_count
+     dmarc_policy_none, dmarc_policy_quarantine, dmarc_policy_reject,
+     dmarc_exists
+
+  B) Cechy naglowkowe (_extract_header_features) - 7 cech:
+     hop_count, missing_headers_count, from_return_path_mismatch,
+     from_reply_to_mismatch, has_x_mailer, has_message_id, anomaly_score
+
+  C) Cechy czasowe (_extract_temporal_features) - 7 cech:
+     hour_of_day, day_of_week, is_weekend, is_night_time,
+     date_in_future, avg_hop_delay, max_hop_delay
+
+  D) Cechy tresci (_extract_content_features) - 8 cech:
+     body_length, html_body_present, plain_body_present,
+     suspicious_keywords_count, exclamation_count,
+     capital_letter_ratio, contains_form, contains_script
+
+  E) Cechy URL (_extract_url_features) - 6 cech:
+     url_count, external_url_count, ip_address_url_count,
+     shortened_url_count, suspicious_tld_count, url_domain_mismatch
+
+  F) Cechy zalacznikow (_extract_attachment_features) - 5 cech:
+     attachment_count, has_executable, has_archive, has_document,
+     total_attachment_size
+
+  G) Cechy nadawcy (_extract_sender_features) - 8 cech:
+     from_name_length, from_contains_reply, from_contains_noreply,
+     from_has_numbers, from_domain_length, to_count, cc_count, bcc_count
+
+  H) Cechy tematu (_extract_subject_features) - 8 cech:
+     subject_length, subject_word_count, subject_has_urgent,
+     subject_has_re_fw, subject_suspicious_keywords,
+     subject_has_special_chars, subject_capital_ratio,
+     subject_exclamation_count
+
+  I) Cechy sieciowe (_extract_network_features) - 6 cech:
+     received_ip_count, received_unique_ip_count,
+     received_has_private_ip, received_hostname_count,
+     received_chain_length, header_count
+
+  J) Cechy MTA (_extract_mta_auth_features) - 4 cechy:
+     mta_spf_pass, mta_dkim_pass, mta_dmarc_pass, mta_auth_score
+
+  K) Cechy dodatkowe - 2 cechy:
+     auth_alignment_score   - laczny wynik alignment autentykacji (0.0-1.0)
+     from_display_name_spoofing - wykrycie podszywania sie pod inny adres
+                                  w polu wyswietlanej nazwy
+
+SLOWA KLUCZOWE PHISHINGOWE (32 wyrazy/frazy):
+  Angielskie: urgent, verify, account, suspended, confirm, password, click,
+    immediately, expire, act now, limited time, congratulations, winner,
+    prize, free, bonus, security, alert, warning, problem, unusual activity
+  Polskie: pilne, zweryfikuj, konto, zablokowane, potwierdz, haslo, kliknij,
+    natychmiast, wygasa, ograniczony czas, gratulacje, wygrana, nagroda,
+    darmowy, bezpieczenstwo, ostrzezenie, nietypowa aktywnosc, przelew,
+    faktura, zaleglosc, odblokuj, weryfikacja, logowanie, zmiana hasla
+
+PODEJRZANE TLD: .tk, .ml, .ga, .cf, .gq, .xyz, .top
+SKRACACZE URL: bit.ly, goo.gl, tinyurl.com, ow.ly, t.co
+ROZSZERZENIA WYKONYWALNE: .exe, .bat, .cmd, .com, .scr, .js, .vbs
+
+
+================================================================================
+9. MODUL: MODELE UCZENIA MASZYNOWEGO (ml_models)
+================================================================================
+
+9.1. EmailClassifier (src/ml_models/predict.py)
+-----------------------------------------------
+Klasyfikator wiadomosci e-mail wykorzystujacy wytrenowane modele.
+
+Inicjalizacja:
+  EmailClassifier(models_dir="models", prefix="")
+    Laduje modele z katalogu: Random Forest, Isolation Forest, Scaler,
+    nazwy cech, konfiguracje (progi, wagi ensemble).
+
+Metody publiczne:
+
+  predict(features: pd.Series|pd.DataFrame) -> Dict[str, Any]
+    Glowna metoda predykcji. Zwraca:
+    {
+      'is_suspicious': bool   - Czy wiadomosc jest podejrzana
+      'confidence': float     - Pewnosc predykcji (0.0-1.0)
+      'risk_level': str       - Poziom ryzyka: HIGH/MEDIUM/LOW
+      'models': dict          - Wyniki poszczegolnych modeli
+      'recommendation': str   - Rekomendacja: QUARANTINE/FLAG/ALLOW
+      'explanation': list     - Lista wyjasnen decyzji
+    }
+
+  predict_batch(features_batch: pd.DataFrame) -> list
+    Predykcja dla wielu wiadomosci.
+
+  get_feature_importance(top_n=20) -> pd.DataFrame|None
+    Zwraca top N najwazniejszych cech z modelu Random Forest.
+
+  explain_prediction(features, result) -> list
+    Generuje czytelne wyjasnienie decyzji.
+
+Logika agregacji predykcji (_aggregate_predictions):
+  - Wagi ensemble: RF=0.75, IF=0.25 (konfigurowalne)
+  - Przeliczenie IF score na prawdopodobienstwo: 0.5 - raw_score
+  - Laczne prawdopodobienstwo: rf_weight * rf_proba + if_weight * if_proba
+  - Porownanie z progiem ensemble (domyslnie 0.5)
+  - Poziomy ryzyka: >=0.8 HIGH, >=0.5 MEDIUM, <0.5 LOW
+
+Klasyfikacja heurystyczna (_heuristic_classification):
+  Fallback gdy brak wytrenowanych modeli. Oparty na punktacji wskaznikow:
+    SPF fail:           +15 pkt
+    DKIM invalid:       +15 pkt
+    From/Return-Path mismatch: +15 pkt
+    Reply-To mismatch:  +10 pkt
+    >=3 podejrzane slowa: +20 pkt
+    1-2 podejrzane slowa: +10 pkt
+    IP w URL:           +15 pkt
+    Skrocone URL:       +10 pkt
+    Podejrzane TLD:     +10 pkt
+    Cyfry w nadawcy:    +5 pkt
+    Wiele wykrzyknikow:  +5 pkt
+    Duzo wielkich liter: +5 pkt
+    Plik wykonywalny:   +20 pkt
+
+    Decyzja: >=60 = HIGH, >=30 = MEDIUM, <30 = LOW (bezpieczne)
+
+9.2. ModelTrainer (src/ml_models/train.py)
+------------------------------------------
+Klasa do pelnego pipeline'u treningu modeli ML.
+
+Metoda glowna:
+
+  full_training_pipeline(X, y, test_size=0.2, hyperparameter_tuning=False)
+    Uruchamia caly proces: przygotowanie danych -> trening -> ewaluacja ->
+    zapis modeli i wynikow.
+
+Etapy treningu:
+
+  A) Przygotowanie danych (prepare_data):
+     - Podzial train/test (stratified)
+     - Opcjonalny podzial kalibracyjny (20% z train)
+     - Standaryzacja (StandardScaler)
+     - Balansowanie klas przez SMOTE (Synthetic Minority Over-sampling)
+
+  B) Trening Random Forest (train_random_forest):
+     Domyslne parametry:
+       n_estimators=200, max_depth=20, min_samples_split=5,
+       min_samples_leaf=2, max_features='sqrt', class_weight='balanced'
+     Z hyperparameter_tuning=True:
+       RandomizedSearchCV z SMOTE wewnatrz foldow CV (60 iteracji)
+       Siatka: n_estimators, max_depth, min_samples_split/leaf,
+       max_features, class_weight, criterion
+
+  C) Trening Isolation Forest (train_isolation_forest):
+     - Trenowany na danych BEZ SMOTE (oryginalny rozklad)
+     - Contamination liczone automatycznie z proporcji phishingu
+     - Proba 5 roznych konfiguracji parametrow
+     - Wybor najlepszej wg F1-score
+
+  D) Ewaluacja (evaluate):
+     - Optymalny prog decyzyjny RF (metoda precision-recall curve)
+     - Metryki: classification_report, confusion_matrix, ROC AUC
+     - Wazona ewaluacja ensemble RF+IF
+     - Prog ensemble z kalibracji (jesli dostepna)
+
+  E) Zapis (save_models):
+     - random_forest_classifier.joblib
+     - isolation_forest_anomaly.joblib
+     - scaler.joblib
+     - feature_names.joblib
+     - model_config.joblib (progi, wagi ensemble)
+     - evaluation_results.json
+
+Uruchamianie z CLI:
+  python src/ml_models/train.py \
+    --data data/processed/training_data.csv \
+    --target is_phishing \
+    --test-size 0.2 \
+    --tune  # opcjonalnie: tuning hiperparametrow
+
+9.3. ModelManager (src/ml_models/model_manager.py)
+--------------------------------------------------
+Zarzadza metadanymi, wersjami i eksportem modeli.
+
+Metody publiczne:
+  register_model(model_name, model_type, metrics, version=None)
+    Rejestruje nowy model z metrykami.
+
+  list_models() -> Dict
+    Zwraca liste wszystkich modeli i ich wersji.
+
+  get_current_version(model_name) -> str|None
+    Pobiera aktualna wersje modelu.
+
+  set_current_version(model_name, version)
+    Ustawia aktualna wersje modelu.
+
+  compare_versions(model_name, version1, version2) -> Dict
+    Porownuje metryki dwoch wersji modelu.
+
+  get_best_version(model_name, metric='f1_score') -> str|None
+    Znajduje najlepsza wersje wg podanej metryki.
+
+  export_model(model_name, version, export_path)
+    Eksportuje model do innej lokalizacji.
+
+  get_model_stats() -> Dict
+    Statystyki: laczna liczba modeli, aktywne wersje.
+
+Metadane przechowywane w: models/metadata.json
+
+
+================================================================================
+10. MODUL: NARZEDZIA POMOCNICZE (utils)
+================================================================================
+
+Plik: src/utils/helpers.py
+
+  setup_logging(log_level="INFO", log_file=None, log_format="json")
+    Konfiguruje logowanie aplikacji.
+    Formaty: "json" (python-json-logger) lub tekst.
+    Opcjonalny zapis do pliku z automatycznym tworzeniem katalogu.
+
+  load_config(config_path="config/config.yaml") -> Dict
+    Laduje konfiguracje z pliku YAML. Zwraca pusty slownik jesli plik
+    nie istnieje.
+
+  save_json(data, file_path, indent=2)
+    Zapisuje dane do pliku JSON (z automatycznym tworzeniem katalogu).
+
+  load_json(file_path) -> Any
+    Wczytuje dane z pliku JSON.
+
+  calculate_metrics(y_true, y_pred) -> Dict[str, float]
+    Oblicza metryki klasyfikacji: accuracy, precision, recall, f1_score,
+    true_negatives, false_positives, false_negatives, true_positives,
+    roc_auc.
+
+  get_timestamp() -> str
+    Zwraca biezacy timestamp w formacie ISO.
+
+  create_directory(path)
+    Tworzy katalog rekurencyjnie (z parents=True).
+
+  file_exists(path) -> bool
+    Sprawdza czy plik istnieje.
+
+  sanitize_filename(filename) -> str
+    Oczyszcza nazwe pliku z niedozwolonych znakow (<>:"/\|?*).
+    Ogranicza dlugosc do 255 znakow.
+
+  format_file_size(size_bytes) -> str
+    Formatuje rozmiar pliku (np. "10.5 MB").
+
+  extract_domain(email) -> str|None
+    Ekstrahuje domene z adresu e-mail.
+
+
+================================================================================
+11. REST API - ENDPOINTY
+================================================================================
+
+Aplikacja FastAPI uruchamiana przez Uvicorn.
+Domyslny adres: http://localhost:8000
+Dokumentacja Swagger: http://localhost:8000/docs
+
+CORS skonifgurowany dla: http://localhost:3000, http://127.0.0.1:5500,
+http://localhost:5500 (konfigurowalne w config.yaml).
+
+11.1. GET /
+-----------
+  Opis: Endpoint glowny - informacje o API
+  Odpowiedz 200:
+    {"message": "Email Spoofing Detector API", "version": "1.0.0", "docs": "/docs"}
+
+11.2. GET /health
+-----------------
+  Opis: Sprawdzenie stanu API i zaladowanych modeli
+  Odpowiedz 200:
+    {
+      "status": "healthy",
+      "version": "1.0.0",
+      "models_loaded": {
+        "random_forest": true|false,
+        "isolation_forest": true|false,
+        "scaler": true|false
+      },
+      "timestamp": "2024-01-01T12:00:00"
+    }
+
+11.3. POST /api/analyze
+-----------------------
+  Opis: Glowny endpoint - analiza wiadomosci e-mail pod katem spoofingu
+
+  Request body (JSON):
+    {
+      "raw_email": string|null       - Surowa wiadomosc w base64
+      "email_string": string|null    - Wiadomosc jako string
+      "analyze_authentication": bool - Czy sprawdzac SPF/DKIM/DMARC (domyslnie: true)
+    }
+    Wymagane: raw_email LUB email_string (jedno z dwoch)
+
+  Odpowiedz 200:
+    {
+      "is_suspicious": bool,
+      "confidence": float,           - 0.0 do 1.0
+      "risk_level": "HIGH"|"MEDIUM"|"LOW",
+      "recommendation": "QUARANTINE"|"FLAG"|"ALLOW",
+      "spoofing_indicators": ["SPF_FAIL", "DKIM_NONE", ...],
+      "authentication": {
+        "spf": {...},
+        "dkim": {...},
+        "dmarc": {...}
+      },
+      "header_analysis": {...},
+      "timestamp": "2024-01-01T12:00:00",
+      "alert_id": "ALERT_abc123"|null
+    }
+
+  Wskazniki spoofingu:
+    Silne (wymuszaja is_suspicious=True):
+      SPF_FAIL, SPF_SOFTFAIL, DKIM_FAIL, DMARC_FAIL,
+      FROM_RETURN_PATH_MISMATCH, REPLY_TO_MISMATCH
+    Informacyjne (nie wymuszaja):
+      SPF_NONE, DKIM_NONE, DMARC_NOT_CONFIGURED
+
+  Bledy:
+    400 - Brak danych e-maila lub nieprawidlowe base64
+    413 - Wiadomosc za duza (limit: 10 MB)
+    500 - Blad wewnetrzny (bez ujawniania szczegolow)
+
+11.4. GET /api/stats
+--------------------
+  Opis: Statystyki systemu
+  Odpowiedz 200:
+    {
+      "total_analyzed": int,
+      "suspicious_detected": int,
+      "safe_emails": int,
+      "detection_rate": float,
+      "last_updated": string|null,
+      "model_info": {...}
+    }
+
+11.5. GET /api/alerts
+---------------------
+  Opis: Lista alertow bezpieczenstwa
+  Parametry query:
+    limit: int (1-500, domyslnie 50)
+    risk_level: string (opcjonalnie: HIGH, MEDIUM, LOW)
+  Odpowiedz 200:
+    {
+      "total": int,
+      "alerts": [{
+        "alert_id": "ALERT_...",
+        "timestamp": "...",
+        "risk_level": "HIGH",
+        "confidence": 0.95,
+        "from": {"email": "..."},
+        "to": [...],
+        "subject": "...",
+        "spoofing_indicators": [...],
+        "recommendation": "QUARANTINE"
+      }, ...]
+    }
+
+11.6. GET /api/alerts/{alert_id}
+--------------------------------
+  Opis: Szczegoly konkretnego alertu
+  Odpowiedz 200: obiekt alertu
+  Bledy: 404 - Alert nie znaleziony
+
+11.7. DELETE /api/alerts/{alert_id}
+-----------------------------------
+  Opis: Usuniecie alertu
+  Odpowiedz 200: {"message": "Alert usuniety", "alert_id": "..."}
+  Bledy: 404 - Alert nie znaleziony
+
+11.8. GET /api/models
+---------------------
+  Opis: Informacje o zaladowanych modelach ML
+  Odpowiedz 200:
+    {
+      "models": {...},
+      "loaded": {"random_forest": bool, "isolation_forest": bool},
+      "feature_count": int
+    }
+
+11.9. GET /api/feature-importance
+---------------------------------
+  Opis: Najwazniejsze cechy z modelu Random Forest
+  Parametry query: top_n: int (domyslnie 20)
+  Odpowiedz 200: {"features": [{"feature": "...", "importance": 0.15}, ...]}
+  Bledy: 404 - Model nie zaladowany
+
+11.10. GET /api/evaluation-metrics
+----------------------------------
+  Opis: Metryki ewaluacji modeli z ostatniego treningu
+  Odpowiedz 200: wyniki z models/evaluation_results.json
+  Bledy: 404 - Brak wynikow ewaluacji
+
+11.11. POST /api/imap/start
+----------------------------
+  Opis: Uruchomienie ciaglego monitorowania skrzynki IMAP
+  Odpowiedz 200: {"status": "started"|"already_running", "message": "..."}
+  Bledy: 400 - Brak konfiguracji IMAP
+
+11.12. POST /api/imap/stop
+---------------------------
+  Opis: Zatrzymanie monitorowania IMAP
+  Odpowiedz 200: {"status": "stopping"|"not_running", "message": "..."}
+
+11.13. GET /api/imap/status
+---------------------------
+  Opis: Status monitorowania IMAP
+  Odpowiedz 200: {"active": bool, "configured": bool}
+
+
+================================================================================
+12. FRONTEND - PANEL OPERATORA
+================================================================================
+
+Prosty panel webowy (HTML + CSS + JavaScript vanilla) sluzacy do:
+- Przegladania alertow bezpieczenstwa
+- Recznej analizy wiadomosci e-mail
+- Monitorowania stanu modeli ML
+- Przegladania statystyk i metryk ewaluacji
+
+Pliki:
+  frontend/index.html   - Struktura strony
+  frontend/style.css    - Style (responsywne, nowoczesny design)
+  frontend/app.js       - Logika aplikacji
+
+ZAKLADKI:
+
+  A) Alerty (domyslna)
+     - Lista alertow bezpieczenstwa z kolorowym oznaczeniem ryzyka
+     - Filtrowanie wg poziomu ryzyka (HIGH/MEDIUM/LOW)
+     - Automatyczne odswiezanie co 30 sekund
+     - Szczegoly: nadawca, temat, czas, pewnosc, wskazniki, rekomendacja
+
+  B) Analiza
+     - Pole tekstowe na surowa wiadomosc e-mail
+     - Opcja wlaczenia/wylaczenia sprawdzania SPF/DKIM/DMARC
+     - Przycisk "Analizuj" wywolujacy POST /api/analyze
+     - Wyswietlenie wyniku: status, pewnosc, wskazniki, autentykacja,
+       rekomendacja
+
+  C) Modele
+     - Status zaladowanych modeli (Random Forest, Isolation Forest)
+     - Wykres najwazniejszych cech (feature importance)
+       z wizualnymi paskami procentowymi
+
+  D) Statystyki
+     - Ogolne: przeanalizowane, podejrzane, bezpieczne, wskaznik detekcji
+     - Metryki ewaluacji modeli: Precision, Recall, F1-Score, Accuracy,
+       ROC AUC, prog decyzyjny
+     - Macierz pomylek (confusion matrix) w formie tabeli
+     - Informacje o zbiorze danych treningowych
+
+NAGLOWEK:
+  Zawsze widoczne 4 karty statystyk:
+  - Przeanalizowane (total_analyzed)
+  - Podejrzane (suspicious_detected)
+  - Bezpieczne (safe_emails)
+  - Wskaznik detekcji (detection_rate %)
+
+Design: responsywny (media queries dla ekranow <768px),
+gradient fioletowy (#667eea -> #764ba2), animacje fadeIn.
+
+
+================================================================================
+13. PIPELINE PRZETWARZANIA E-MAILA
+================================================================================
+
+Szczegolowy przeplyw od momentu otrzymania e-maila do decyzji:
+
+  WEJSCIE: Surowa wiadomosc e-mail (string lub base64)
+  -------
+
+  KROK 1: Walidacja wejscia (app.py::analyze_email)
+  ---------
+    - Sprawdzenie rozmiaru (<= 10 MB)
+    - Dekodowanie base64 (jesli raw_email)
+    - Parsowanie wiadomosci
+
+  KROK 2: Parsowanie (parser.py::parse_raw_email)
+  ---------
+    -> Wynik: slownik email_data z naglowkami, trescia, zalacznikami
+
+  KROK 3: Analiza naglowkow (header_analyzer.py::analyze)
+  ---------
+    -> Wynik: anomalie, from_mismatch, reply_to_mismatch, anomaly_score
+
+  KROK 4: Weryfikacja autentykacji (opcjonalna)
+  ---------
+    4a. SPF: spf_checker.check_from_email_data(email_data)
+    4b. DKIM: dkim_checker.check_from_email_data(email_data, raw_bytes)
+    4c. DMARC: dmarc_checker.check_from_email_data(email_data)
+    -> Wynik: slownik authentication_results z SPF/DKIM/DMARC
+
+  KROK 5: Ekstrakcja cech (extractor.py::extract_features)
+  ---------
+    Wejscie: email_data + auth results + header analysis
+    -> Wynik: pd.Series z ~60 cechami liczbowymi
+
+  KROK 6: Klasyfikacja ML (predict.py::predict)
+  ---------
+    6a. Dopasowanie kolumn do feature_names
+    6b. Skalowanie przez StandardScaler
+    6c. Predykcja Random Forest (prawdopodobienstwo phishingu)
+    6d. Predykcja Isolation Forest (wynik anomalii)
+    6e. Agregacja: RF*0.75 + IF*0.25, porownanie z progiem
+    6f. Okreslenie risk_level i rekomendacji
+    -> Wynik: is_suspicious, confidence, risk_level
+
+  KROK 7: Reguly nadrzedne (app.py)
+  ---------
+    Budowa listy wskaznikow spoofingu na podstawie autentykacji i naglowkow.
+    Rozroznienie silnych (SPF_FAIL, DKIM_FAIL) od informacyjnych (SPF_NONE).
+    Jesli istnieja SILNE wskazniki a model zwrocil is_suspicious=False:
+      -> wymuszenie is_suspicious=True, podniesienie risk_level
+
+  KROK 8: Generowanie alertu (app.py)
+  ---------
+    Jesli is_suspicious=True:
+      -> Tworzenie alertu z unikalnym ID (ALERT_xxx)
+      -> Zapis do data/alerts.json (w tle, thread-safe)
+
+  KROK 9: Aktualizacja statystyk (app.py::update_statistics)
+  ---------
+    Inkrementacja total_analyzed i suspicious_detected lub safe_emails.
+    Zapis do data/stats.json (thread-safe).
+
+  WYJSCIE: EmailAnalysisResponse
+  --------
+    is_suspicious, confidence, risk_level, recommendation,
+    spoofing_indicators, authentication, header_analysis,
+    timestamp, alert_id
+
+
+================================================================================
+14. MONITOROWANIE IMAP
+================================================================================
+
+System umozliwia ciagle monitorowanie skrzynki e-mail przez protokol IMAP.
+
+Konfiguracja (config/config.yaml -> sekcja imap):
+  server: "imap.gmail.com"     - adres serwera IMAP
+  port: 993                    - port (993 dla SSL)
+  username: "user@gmail.com"   - login
+  password: "haslo"            - haslo (app password dla Gmail)
+  folder: "INBOX"              - monitorowany folder
+  check_interval: 60           - interwal sprawdzania (sekundy)
+  ssl: true                    - uzywac SSL
+
+Dzialanie:
+  1. POST /api/imap/start uruchamia watek daemonowy
+  2. Watek laczy sie z serwerem IMAP
+  3. Przy pierwszym sprawdzeniu zapamiętuje istniejace UID
+  4. W petli co check_interval sekund pobiera nowe wiadomosci
+  5. Kazda nowa wiadomosc przechodzi pelny pipeline analizy
+     (_process_imap_email)
+  6. Jesli wykryto phishing -> generowany jest alert (IMAP_xxx)
+  7. POST /api/imap/stop ustawia flage stop, watek konczy prace
+
+Thread-safety:
+  - Wspoldielony stan (alerty, statystyki) chroniony przez threading.Lock
+  - Watek IMAP jest daemonem (konczy sie z procesem glownym)
+  - Petla sprawdza flage stop co 1 sekunde (nie co interwal)
+
+
+================================================================================
+15. TRENING MODELI ML
+================================================================================
+
+15.1. PRZYGOTOWANIE DANYCH
+--------------------------
+Skrypt: scripts/prepare_dataset.py
+
+Zrodla danych:
+  - data/raw/ham/easy_ham/ i easy_ham_2/ - bezpieczne wiadomosci (SpamAssassin)
+  - data/raw/spam/spam/ i spam_2/        - spam/phishing (SpamAssassin)
+  - data/sample_emails/                   - wlasne przykladowe e-maile
+
+Proces:
+  1. Wczytanie plikow e-mail z katalogow
+  2. Parsowanie kazdego e-maila (EmailParser)
+  3. Analiza naglowkow (HeaderAnalyzer)
+  4. Ekstrakcja cech (FeatureExtractor) - bez live DNS (SPF/DKIM/DMARC = None)
+  5. Dodanie etykiety is_phishing (0 = ham, 1 = phishing)
+  6. Probki z sample_emails powielane 20x (augmentacja)
+  7. Uzupelnienie brakujacych wartosci zerami
+  8. Zapis do data/processed/training_data.csv
+
+15.2. TRENING
+-------------
+Skrypt: scripts/train_models.ps1
+Lub bezposrednio:
+  python src/ml_models/train.py \
+    --data data/processed/training_data.csv \
+    --target is_phishing \
+    --test-size 0.2 \
+    --models-dir models
+
+Etapy:
+  1. Wczytanie CSV i podzial na cechy (X) i etykiety (y)
+  2. Stratyfikowany podzial train/test (80/20)
+  3. Opcjonalny podzial kalibracyjny (20% z train)
+  4. Standaryzacja (StandardScaler)
+  5. Balansowanie SMOTE (oversampling klasy mniejszosciowej)
+  6. Trening Random Forest
+  7. Trening Isolation Forest (na danych bez SMOTE)
+  8. Ewaluacja: metryki, macierz pomylek, ROC AUC
+  9. Optymalny prog decyzyjny (precision-recall curve)
+  10. Ewaluacja ensemble (RF*0.75 + IF*0.25)
+  11. Zapis modeli i wynikow
+
+15.3. GENEROWANIE PRZYKLADOWYCH E-MAILI
+----------------------------------------
+Skrypt: scripts/generate_sample_emails.py
+
+Generuje 18 przykladowych e-maili (9 legitymnych + 9 phishingowych)
+z roznych szablonow:
+  Legitymne: newsletter, ticket supportu, potwierdzenie zamowienia
+  Phishing: PayPal verify, Amazon lock, lottery scam
+
+E-maile phishingowe zawieraja typowe wzorce:
+  - Niezgodnosc Return-Path/From
+  - Podejrzane Reply-To (scam@evil.com)
+  - IP w URL (http://192.168.1.100/...)
+  - Podejrzane TLD (.tk, .xyz)
+  - Slowa kluczowe: URGENT, congratulations, ACT NOW
+  - X-Mailer: Python/3.8
+
+
+================================================================================
+16. KONFIGURACJA SYSTEMU
+================================================================================
+
+Plik: config/config.yaml (tworzony z config/config.yaml.example)
+
+SEKCJE KONFIGURACJI:
+
+  api:
+    host: "0.0.0.0"           - adres nasluchu
+    port: 8000                 - port
+    debug: false               - tryb debug
+    workers: 4                 - liczba workerow
+    reload: false              - auto-reload kodu
+    cors_origins: [...]        - dozwolone originy CORS
+
+  imap:
+    enabled: false             - wlacz monitoring IMAP
+    server: "imap.gmail.com"   - serwer IMAP
+    port: 993                  - port
+    username: "..."            - login
+    password: "..."            - haslo
+    folder: "INBOX"            - folder
+    check_interval: 60         - interwal (s)
+    ssl: true                  - SSL
+
+  authentication:
+    spf/dkim/dmarc:
+      enabled: true            - wlacz weryfikacje
+      timeout: 5               - timeout DNS (s)
+
+  models:
+    random_forest:
+      enabled: true
+      model_path: "models/random_forest_classifier.joblib"
+      n_estimators: 100
+      max_depth: 20
+      min_samples_split: 5
+      class_weight: "balanced"
+    isolation_forest:
+      enabled: true
+      model_path: "models/isolation_forest_anomaly.joblib"
+      n_estimators: 100
+      contamination: 0.1
+      max_samples: 256
+
+  thresholds:
+    high_risk: 0.8
+    medium_risk: 0.5
+    low_risk: 0.3
+
+  actions:
+    high_risk: "QUARANTINE"
+    medium_risk: "FLAG"
+    low_risk: "ALLOW"
+
+  logging:
+    level: "INFO"              - poziom logowania
+    format: "json"             - format (json lub text)
+    file: "logs/detector.log"  - plik logów
+    rotation: "daily"
+    retention: 30              - retencja (dni)
+
+  performance:
+    max_email_size: 10485760   - max rozmiar e-maila (10 MB)
+    processing_timeout: 30     - timeout przetwarzania (s)
+    cache_enabled: true
+    cache_ttl: 3600            - TTL cache (s)
+
+
+================================================================================
+17. SKRYPTY POMOCNICZE
+================================================================================
+
+scripts/setup.ps1 (Windows) / setup.sh (Linux)
+  Tworzy srodowisko wirtualne, instaluje zaleznosci, tworzy katalogi,
+  kopiuje konfiguracje.
+
+scripts/run_api.ps1 (Windows) / run_api.sh (Linux)
+  Aktywuje srodowisko i uruchamia API z Uvicorn (reload mode).
+
+scripts/train_models.ps1 / train_models.sh
+  Uruchamia trening modeli z data/processed/training_data.csv.
+
+scripts/full_demo.ps1
+  Pelny pipeline: przygotowanie danych -> trening -> frontend -> API.
+
+scripts/prepare_dataset.py
+  Przetwarza surowe e-maile z data/raw/ do training_data.csv.
+
+scripts/generate_sample_emails.py
+  Generuje przykladowe e-maile (legitymne i phishingowe).
+
+scripts/download_emails_imap.py
+  Pobiera e-maile ze skrzynki IMAP (do budowy zbioru danych).
+
+scripts/test.ps1
+  Uruchamia testy pytest.
+
+scripts/test_all_features.ps1
+  Testy wszystkich funkcji systemu.
+
+scripts/test_phishing_detection.ps1
+  Test wykrywania phishingu na przykladach.
+
+scripts/kill_port.ps1
+  Zamyka proces nasluchujacy na porcie (domyslnie 8000).
+
+scripts/open_frontend.ps1
+  Otwiera frontend w przegladarce.
+
+
+================================================================================
+18. TESTY
+================================================================================
+
+Framework: pytest
+Uruchomienie: pytest tests/ -v
+
+18.1. tests/test_api.py
+------------------------
+Testy REST API (z FastAPI TestClient):
+
+  TestBasicEndpoints:
+    - test_root              - GET / zwraca 200 z wersja
+    - test_health            - GET /health zwraca status
+    - test_stats             - GET /api/stats zwraca statystyki
+    - test_alerts_returns_list - GET /api/alerts zwraca liste
+    - test_models_info       - GET /api/models zwraca info o modelach
+
+  TestAnalyzeEndpoint:
+    - test_analyze_safe_email       - Analiza bezpiecznego e-maila
+    - test_missing_email_data       - 400 bez danych e-maila
+    - test_invalid_base64           - 400 dla blednego base64
+    - test_payload_too_large        - 413 dla za duzego e-maila
+    - test_payload_too_large_base64 - 413 dla za duzego base64
+    - test_error_500_no_leak        - 500 nie ujawnia szczegolow wewnetrznych
+    - test_invalid_json             - 422 dla nieprawidlowego JSON
+
+  TestAlertsManagement:
+    - test_get_nonexistent_alert    - 404 dla nieistniejacego alertu
+    - test_delete_nonexistent_alert - 404 przy usuwaniu nieistniejacego
+    - test_alerts_limit_validation  - Walidacja limitu (1-500)
+    - test_alerts_risk_filter       - Filtrowanie po risk_level
+
+  TestFeatureImportance:
+    - test_feature_importance_ok     - Poprawne zwrocenie cech
+    - test_feature_importance_no_model - 404 bez modelu
+
+  TestIMAPEndpoints:
+    - test_imap_status              - GET /api/imap/status
+    - test_imap_start_without_config - 400 bez konfiguracji
+    - test_imap_stop_not_running    - Stop gdy nie dziala
+
+  TestThreadSafety:
+    - test_update_statistics_thread_safe - 10 watkow x 50 aktualizacji
+    - test_save_alert_thread_safe       - 10 watkow dodajacych alerty
+
+  TestSpoofingIndicators:
+    - test_spf_fail_is_strong_indicator        - SPF_FAIL wymusza suspicious
+    - test_missing_dkim_is_informational_only  - DKIM_NONE nie wymusza
+
+18.2. tests/test_parser.py
+---------------------------
+Testy parsera e-mail i analizatora naglowkow:
+  - Parsowanie e-maila ze stringa
+  - Parsowanie adresow (pojedynczych i wielu)
+  - Ekstrakcja naglowkow Received
+  - Ekstrakcja URL
+  - Obsluga pustych/nieprawidlowych wiadomosci
+  - Analiza naglowkow i obliczanie anomaly_score
+  - Wykrywanie brakujacych naglowkow
+  - Wykrywanie niezgodnosci From/Return-Path
+
+18.3. tests/test_authentication.py
+-----------------------------------
+  Testy weryfikacji SPF, DKIM, DMARC.
+
+18.4. tests/test_classifier.py
+-------------------------------
+  Testy klasyfikatora (predykcje, heurystyki).
+
+18.5. tests/test_feature_extractor.py
+--------------------------------------
+  Testy ekstrakcji cech z roznych typow e-maili.
+
+18.6. tests/test_header_analyzer.py
+------------------------------------
+  Testy analizatora naglowkow.
+
+18.7. tests/test_train.py
+--------------------------
+  Testy pipeline'u treningu modeli.
+
+
+================================================================================
+19. DANE I ARTEFAKTY
+================================================================================
+
+19.1. DANE WEJSCIOWE
+---------------------
+  data/raw/ham/        - Bezpieczne e-maile (format SpamAssassin)
+  data/raw/spam/       - Spam/phishing (format SpamAssassin)
+  data/sample_emails/  - Przykladowe e-maile (.eml)
+
+19.2. DANE PRZETWORZONE
+------------------------
+  data/processed/training_data.csv - Zbior treningowy (cechy + etykiety)
+
+19.3. ARTEFAKTY MODELI
+-----------------------
+  models/random_forest_classifier.joblib  - Wytrenowany Random Forest
+  models/isolation_forest_anomaly.joblib  - Wytrenowany Isolation Forest
+  models/scaler.joblib                    - Fitted StandardScaler
+  models/feature_names.joblib             - Lista nazw cech (kolejnosc)
+  models/model_config.joblib              - Konfiguracja:
+    {
+      'optimal_threshold': float,     - Optymalny prog RF
+      'ensemble_weights': {'rf': 0.75, 'if': 0.25},
+      'ensemble_threshold': float     - Prog ensemble
+    }
+  models/evaluation_results.json          - Wyniki ewaluacji
+  models/metadata.json                    - Metadane wersji modeli
+
+19.4. DANE RUNTIME
+-------------------
+  data/stats.json   - Statystyki:
+    {
+      'total_analyzed': int,
+      'suspicious_detected': int,
+      'safe_emails': int,
+      'last_updated': string|null
+    }
+  data/alerts.json  - Lista alertow:
+    [{
+      'alert_id': string,
+      'timestamp': string,
+      'risk_level': string,
+      'confidence': float,
+      'from': dict,
+      'to': list,
+      'subject': string,
+      'spoofing_indicators': list,
+      'recommendation': string
+    }, ...]
+
+
+================================================================================
+20. OGRANICZENIA I UWAGI
+================================================================================
+
+  1. Bez wytrenowanych modeli ML system dziala w trybie heurystycznym.
+     Jakosc detekcji zalezy od jakosci zbioru treningowego.
+
+  2. Persystencja oparta na plikach JSON (alerts.json, stats.json) jest
+     odpowiednia dla prototypu. Dla produkcji zalecane jest przejscie na
+     baze danych (PostgreSQL, Redis).
+
+  3. Weryfikacja SPF/DKIM/DMARC wymaga dostepu do DNS. Zapytania moga
+     byc wolne lub niemozliwe w srodowiskach offline.
+
+  4. Limit rozmiaru wiadomosci: 10 MB. Wieksze e-maile sa odrzucane (413).
+
+  5. Monitorowanie IMAP wymaga poprawnej konfiguracji w config.yaml.
+     Dla Gmail wymagane jest haslo aplikacji (App Password).
+
+  6. Frontend nie wspiera autentykacji uzytkownikow - jest przeznaczony
+     do uzytku w sieciach zaufanych.
+
+  7. CORS jest ograniczony do localhost - nalezy dostosowac dla wdrozenia
+     produkcyjnego.
+
+  8. Thread-safety zapewniony przez threading.Lock - jednowatkowe zapisy.
+     Przy duzym obciazeniu rozwazyc asynchroniczna baze danych.
+
+  9. Isolation Forest jest trenowany na danych bez SMOTE (zachowuje
+     oryginalny rozklad). Contamination jest liczone automatycznie.
+
+ 10. Optymalny prog decyzyjny (threshold) jest dobierany na zbiorze
+     kalibracyjnym (jesli wystarczajaco duzy). Przy malych zbiorach
+     danych uzywany jest domyslny prog 0.5.
+
+
+================================================================================
+                         KONIEC DOKUMENTACJI
+                     Email Spoofing Detector v1.0.0
+================================================================================

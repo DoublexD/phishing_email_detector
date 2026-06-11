@@ -3,16 +3,18 @@ FastAPI Application
 Główna aplikacja REST API do wykrywania spoofingu
 """
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any
 import base64
+import re
 import logging
+import threading
+import uuid
 from datetime import datetime
 
-# Importy lokalne
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -27,33 +29,119 @@ from feature_extraction.extractor import FeatureExtractor
 from ml_models.predict import EmailClassifier
 from ml_models.model_manager import ModelManager
 from utils.helpers import setup_logging, load_config, save_json, load_json
+from utils.domain_utils import (
+    get_organizational_domain,
+    same_organizational_domain,
+    extract_email_address,
+)
 
-# Konfiguracja logowania
 logger = setup_logging()
 
-# Ładowanie konfiguracji
 config = load_config()
 
-# Inicjalizacja FastAPI
+MAX_EMAIL_SIZE = 10 * 1024 * 1024
+
+TRUSTED_SENDER_DOMAINS = {
+    'google.com', 'accounts.google.com', 'gmail.com',
+    'googlemail.com', 'youtube.com',
+    'microsoft.com', 'outlook.com', 'hotmail.com', 'live.com',
+    'apple.com', 'icloud.com',
+    'facebook.com', 'instagram.com', 'twitter.com', 'x.com',
+    'linkedin.com', 'github.com', 'amazon.com',
+    'booksy.com', 'allegro.pl', 'olx.pl', 'inpost.pl',
+    'mbank.pl', 'ing.pl', 'pkobp.pl', 'santander.pl',
+    'spotify.com', 'netflix.com', 'paypal.com',
+}
+
+
+def compute_auth_alignment(email_data: Dict[str, Any],
+                           authentication_results: Optional[Dict[str, Any]]) -> Dict[str, bool]:
+    """
+    Ocena zgodności (alignment) SPF i DKIM z domeną pola From wg zasad DMARC.
+
+    Pozwala odróżnić uwierzytelniony, legalny mailing (np. wysyłany przez
+    dostawcę typu SendGrid z poddomeny ``em.spotify.com``) od faktycznego
+    podszywania się pod cudzą domenę.
+    """
+    info = {
+        'dkim_aligned': False,
+        'spf_aligned': False,
+        'dmarc_pass': False,
+        'envelope_aligned': False,
+    }
+
+    if not authentication_results:
+        return info
+
+    from_email = email_data.get('from', {}).get('email', '')
+    from_org = get_organizational_domain(from_email)
+    if not from_org:
+        return info
+
+    dkim = authentication_results.get('dkim') or {}
+    if dkim.get('valid'):
+        for signature in dkim.get('signatures', []):
+            signing_domain = (signature.get('d') or '').lower()
+            if signing_domain and get_organizational_domain(signing_domain) == from_org:
+                info['dkim_aligned'] = True
+                break
+
+    envelope_email = extract_email_address(email_data.get('return_path', '') or '') or from_email
+
+    spf = authentication_results.get('spf') or {}
+    if spf.get('valid') and get_organizational_domain(envelope_email) == from_org:
+        info['spf_aligned'] = True
+
+    info['envelope_aligned'] = same_organizational_domain(envelope_email, from_email)
+
+    dmarc = authentication_results.get('dmarc') or {}
+    if dmarc.get('valid') and (info['dkim_aligned'] or info['spf_aligned']):
+        info['dmarc_pass'] = True
+
+    # Fallback: gdy lokalne zapytania DNS zawiodą (temperror), zaufaj wynikom
+    # uwierzytelniania dodanym przez serwer odbiorcy w nagłówku
+    # Authentication-Results (jego topowe wystąpienie pochodzi od MTA odbiorcy).
+    auth_header = email_data.get('authentication_results', '')
+    if not auth_header:
+        auth_header = email_data.get('headers', {}).get('Authentication-Results', '')
+    if isinstance(auth_header, list):
+        auth_header = ' '.join(auth_header)
+    auth_lower = auth_header.lower() if auth_header else ''
+    if 'dmarc=pass' in auth_lower:
+        header_from_match = re.search(r'header\.from=([\w.\-]+)', auth_lower)
+        header_from_org = (
+            get_organizational_domain(header_from_match.group(1))
+            if header_from_match else from_org
+        )
+        if header_from_org == from_org:
+            info['dmarc_pass'] = True
+
+    return info
+
 app = FastAPI(
     title="Email Spoofing Detector API",
     description="REST API do wykrywania spoofingu i phishingu w wiadomościach e-mail",
     version="1.0.0"
 )
 
-# CORS
+_cors_origins = config.get('api', {}).get('cors_origins', [
+    "http://localhost:3000",
+    "http://localhost:5500",
+    "http://localhost:8080",
+    "http://127.0.0.1:5500",
+    "http://127.0.0.1:8080",
+    "null",
+])
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # W produkcji należy ograniczyć
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Ścieżka do modeli — zawsze względem lokalizacji tego pliku (src/api/app.py → ../../models)
 _models_dir = str(Path(__file__).parent.parent.parent / "models")
 
-# Inicjalizacja komponentów
 email_parser = EmailParser()
 header_analyzer = HeaderAnalyzer()
 spf_checker = SPFChecker()
@@ -63,7 +151,6 @@ feature_extractor = FeatureExtractor()
 classifier = EmailClassifier(models_dir=_models_dir)
 model_manager = ModelManager(models_dir=_models_dir)
 
-# Ścieżki persystencji
 _data_dir = Path(__file__).parent.parent.parent / "data"
 _stats_file = _data_dir / "stats.json"
 _alerts_file = _data_dir / "alerts.json"
@@ -87,12 +174,12 @@ def _load_persisted_alerts() -> list:
 alerts = _load_persisted_alerts()
 statistics = _load_persisted_stats()
 
-# Stan monitorowania IMAP
+_state_lock = threading.Lock()
+
 imap_monitor_active = False
 imap_monitor_thread = None
 
 
-# Modele Pydantic
 class EmailAnalysisRequest(BaseModel):
     """Request do analizy e-maila"""
     raw_email: Optional[str] = Field(None, description="Surowa wiadomość zakodowana w base64")
@@ -142,7 +229,6 @@ class HealthResponse(BaseModel):
     timestamp: str
 
 
-# Endpointy
 @app.get("/", response_model=Dict[str, str])
 async def root():
     """Endpoint główny"""
@@ -174,20 +260,24 @@ async def analyze_email(request: EmailAnalysisRequest, background_tasks: Backgro
     Analizuje wiadomość e-mail pod kątem spoofingu
     """
     try:
-        # Parsuj e-mail
         if request.raw_email:
-            raw_email_bytes = base64.b64decode(request.raw_email)
+            if len(request.raw_email) > MAX_EMAIL_SIZE:
+                raise HTTPException(status_code=413, detail="E-mail zbyt duży")
+            try:
+                raw_email_bytes = base64.b64decode(request.raw_email)
+            except Exception:
+                raise HTTPException(status_code=400, detail="Nieprawidłowe kodowanie base64")
             email_data = email_parser.parse_raw_email(raw_email_bytes)
         elif request.email_string:
+            if len(request.email_string) > MAX_EMAIL_SIZE:
+                raise HTTPException(status_code=413, detail="E-mail zbyt duży")
             email_data = email_parser.parse_email_string(request.email_string)
-            raw_email_bytes = request.email_string.encode('utf-8')
+            raw_email_bytes = request.email_string.encode('utf-8', errors='replace')
         else:
             raise HTTPException(status_code=400, detail="Brak danych e-maila")
-        
-        # Analiza nagłówków
+
         header_analysis = header_analyzer.analyze(email_data)
-        
-        # Autentykacja (jeśli włączona)
+
         authentication_results = None
         if request.analyze_authentication:
             spf_result = spf_checker.check_from_email_data(email_data)
@@ -203,8 +293,7 @@ async def analyze_email(request: EmailAnalysisRequest, background_tasks: Backgro
             spf_result = None
             dkim_result = None
             dmarc_result = None
-        
-        # Ekstrakcja cech
+
         features = feature_extractor.extract_features(
             email_data,
             spf_result=spf_result,
@@ -212,28 +301,66 @@ async def analyze_email(request: EmailAnalysisRequest, background_tasks: Backgro
             dmarc_result=dmarc_result,
             header_analysis=header_analysis
         )
-        
-        # Klasyfikacja
+
         prediction = classifier.predict(features)
-        
-        # Zbierz wskaźniki spoofingu — rozróżniamy silne (aktywne fałszerstwo)
-        # od informacyjnych (brak konfiguracji, co jest normalne dla wielu domen)
+
+        alignment = compute_auth_alignment(email_data, authentication_results)
+
+        if authentication_results:
+            spf_ok = authentication_results['spf'].get('result') == 'pass'
+            dkim_ok = authentication_results['dkim'].get('result') == 'pass'
+
+            if not dkim_ok or not spf_ok:
+                auth_header = email_data.get('authentication_results', '')
+                if not auth_header:
+                    auth_header = email_data.get('headers', {}).get('Authentication-Results', '')
+                if isinstance(auth_header, list):
+                    auth_header = ' '.join(auth_header)
+                auth_lower = auth_header.lower() if auth_header else ''
+                if not dkim_ok and 'dkim=pass' in auth_lower:
+                    dkim_ok = True
+                if not spf_ok and 'spf=pass' in auth_lower:
+                    spf_ok = True
+
+            sender_domain = email_data.get('from', {}).get('email', '').split('@')[-1].lower()
+            from_org = get_organizational_domain(sender_domain)
+            is_trusted = (
+                sender_domain in TRUSTED_SENDER_DOMAINS
+                or (from_org and from_org in TRUSTED_SENDER_DOMAINS)
+            )
+
+            factor = None
+            if alignment['dmarc_pass']:
+                factor = 0.25 if is_trusted else 0.5
+            elif spf_ok and dkim_ok:
+                factor = 0.4 if is_trusted else 0.6
+
+            if factor is not None:
+                prediction['confidence'] *= factor
+                if prediction['confidence'] < 0.5:
+                    prediction['is_suspicious'] = False
+                    prediction['risk_level'] = 'LOW'
+                    prediction['recommendation'] = 'ALLOW'
+                elif prediction['confidence'] < 0.8:
+                    prediction['risk_level'] = 'MEDIUM'
+                    prediction['recommendation'] = 'FLAG'
+
         spoofing_indicators = []
         info_indicators = []
         
         if authentication_results:
-            spf_result = authentication_results['spf'].get('result', 'none')
-            if spf_result == 'fail':
+            spf_result_str = authentication_results['spf'].get('result', 'none')
+            if spf_result_str == 'fail' and not alignment['dmarc_pass']:
                 spoofing_indicators.append("SPF_FAIL")
-            elif spf_result == 'softfail':
+            elif spf_result_str == 'softfail' and not alignment['dmarc_pass']:
                 spoofing_indicators.append("SPF_SOFTFAIL")
-            elif spf_result == 'none':
+            elif spf_result_str == 'none' and not alignment['dmarc_pass']:
                 info_indicators.append("SPF_NONE")
             
             dkim_data = authentication_results['dkim']
-            if dkim_data.get('result') == 'fail':
+            if dkim_data.get('result') == 'fail' and not alignment['dmarc_pass']:
                 spoofing_indicators.append("DKIM_FAIL")
-            elif dkim_data.get('result') == 'none':
+            elif dkim_data.get('result') == 'none' and not alignment['dmarc_pass']:
                 info_indicators.append("DKIM_NONE")
             
             if not authentication_results['dmarc'].get('valid'):
@@ -242,29 +369,26 @@ async def analyze_email(request: EmailAnalysisRequest, background_tasks: Backgro
                 else:
                     info_indicators.append("DMARC_NOT_CONFIGURED")
         
-        if header_analysis.get('from_mismatch'):
+        if header_analysis.get('from_mismatch') and not (
+            alignment['envelope_aligned'] or alignment['dmarc_pass']
+        ):
             spoofing_indicators.append("FROM_RETURN_PATH_MISMATCH")
         
-        if header_analysis.get('reply_to_mismatch'):
+        if header_analysis.get('reply_to_mismatch') and not alignment['dmarc_pass']:
             spoofing_indicators.append("REPLY_TO_MISMATCH")
 
         all_indicators = spoofing_indicators + info_indicators
 
-        # Reguły nadrzędne: TYLKO silne wskaźniki (aktywne fałszerstwo)
-        # wymuszają podejrzany status. Brak DKIM/DMARC/SPF jest jedynie
-        # informacją — wiele legalnych domen nie ma ich skonfigurowanych.
         if spoofing_indicators and not prediction['is_suspicious']:
             prediction['is_suspicious'] = True
             if prediction['risk_level'] == 'LOW':
                 prediction['risk_level'] = 'MEDIUM'
             prediction['recommendation'] = _get_recommendation_from_risk(prediction['risk_level'])
 
-        # Generuj alert ID jeśli podejrzane
         alert_id = None
         if prediction['is_suspicious']:
-            alert_id = f"ALERT_{datetime.now().strftime('%Y%m%d%H%M%S')}_{len(alerts)}"
-            
-            # Dodaj do alertów (w tle)
+            alert_id = f"ALERT_{uuid.uuid4().hex[:12]}"
+
             background_tasks.add_task(
                 save_alert,
                 alert_id,
@@ -273,11 +397,9 @@ async def analyze_email(request: EmailAnalysisRequest, background_tasks: Backgro
                 authentication_results,
                 all_indicators
             )
-        
-        # Aktualizuj statystyki
+
         update_statistics(prediction['is_suspicious'])
-        
-        # Przygotuj odpowiedź
+
         response = EmailAnalysisResponse(
             is_suspicious=prediction['is_suspicious'],
             confidence=prediction['confidence'],
@@ -296,7 +418,7 @@ async def analyze_email(request: EmailAnalysisRequest, background_tasks: Backgro
         raise
     except Exception as e:
         logger.error(f"Błąd analizy e-maila: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Błąd analizy: {str(e)}")
+        raise HTTPException(status_code=500, detail="Wewnętrzny błąd serwera podczas analizy")
 
 
 @app.get("/api/stats", response_model=StatsResponse)
@@ -319,18 +441,18 @@ async def get_statistics():
 
 
 @app.get("/api/alerts")
-async def get_alerts(limit: int = 50, risk_level: Optional[str] = None):
+async def get_alerts(
+    limit: int = Query(default=50, ge=1, le=500),
+    risk_level: Optional[str] = None
+):
     """
     Zwraca listę alertów
-    
-    Args:
-        limit: Maksymalna liczba alertów
-        risk_level: Filtruj według poziomu ryzyka (HIGH, MEDIUM, LOW)
     """
-    filtered_alerts = alerts
+    with _state_lock:
+        filtered_alerts = list(alerts)
     
     if risk_level:
-        filtered_alerts = [a for a in alerts if a.get('risk_level') == risk_level.upper()]
+        filtered_alerts = [a for a in filtered_alerts if a.get('risk_level') == risk_level.upper()]
     
     return {
         "total": len(filtered_alerts),
@@ -352,10 +474,12 @@ async def get_alert(alert_id: str):
 async def delete_alert(alert_id: str):
     """Usuwa alert"""
     global alerts
-    original_length = len(alerts)
-    alerts = [a for a in alerts if a.get('alert_id') != alert_id]
+    with _state_lock:
+        original_length = len(alerts)
+        alerts = [a for a in alerts if a.get('alert_id') != alert_id]
+        removed = len(alerts) < original_length
     
-    if len(alerts) == original_length:
+    if not removed:
         raise HTTPException(status_code=404, detail="Alert nie znaleziony")
     
     return {"message": "Alert usunięty", "alert_id": alert_id}
@@ -390,23 +514,22 @@ async def get_feature_importance(top_n: int = 20):
 @app.get("/api/evaluation-metrics")
 async def get_evaluation_metrics():
     """Zwraca metryki ewaluacji modeli (precision, recall, F1-score) z ostatniego treningu"""
-    import json
-    
     eval_path = Path(_models_dir) / "evaluation_results.json"
     if not eval_path.exists():
         raise HTTPException(status_code=404, detail="Brak wyników ewaluacji - wytrenuj modele najpierw")
     
-    with open(eval_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    try:
+        return load_json(str(eval_path))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Błąd odczytu wyników ewaluacji")
 
 
-# Funkcje pomocnicze
 def save_alert(alert_id: str, 
               email_data: Dict[str, Any],
               prediction: Dict[str, Any],
               authentication: Optional[Dict[str, Any]],
               indicators: List[str]):
-    """Zapisuje alert (wykonywane w tle)"""
+    """Zapisuje alert (wykonywane w tle, thread-safe)"""
     alert = {
         'alert_id': alert_id,
         'timestamp': datetime.now().isoformat(),
@@ -419,11 +542,12 @@ def save_alert(alert_id: str,
         'recommendation': prediction['recommendation']
     }
     
-    alerts.append(alert)
-    try:
-        save_json(alerts, str(_alerts_file))
-    except Exception as e:
-        logger.warning(f"Nie udało się zapisać alertów: {e}")
+    with _state_lock:
+        alerts.append(alert)
+        try:
+            save_json(alerts, str(_alerts_file))
+        except Exception as e:
+            logger.warning(f"Nie udało się zapisać alertów: {e}")
     logger.info(f"Utworzono alert: {alert_id}")
 
 
@@ -435,18 +559,19 @@ def _get_recommendation_from_risk(risk_level: str) -> str:
 
 def update_statistics(is_suspicious: bool):
     """Aktualizuje statystyki i zapisuje na dysk"""
-    statistics['total_analyzed'] += 1
-    
-    if is_suspicious:
-        statistics['suspicious_detected'] += 1
-    else:
-        statistics['safe_emails'] += 1
-    
-    statistics['last_updated'] = datetime.now().isoformat()
-    try:
-        save_json(statistics, str(_stats_file))
-    except Exception as e:
-        logger.warning(f"Nie udało się zapisać statystyk: {e}")
+    with _state_lock:
+        statistics['total_analyzed'] += 1
+        
+        if is_suspicious:
+            statistics['suspicious_detected'] += 1
+        else:
+            statistics['safe_emails'] += 1
+        
+        statistics['last_updated'] = datetime.now().isoformat()
+        try:
+            save_json(statistics, str(_stats_file))
+        except Exception as e:
+            logger.warning(f"Nie udało się zapisać statystyk: {e}")
 
 
 def _process_imap_email(raw_email: bytes):
@@ -465,15 +590,65 @@ def _process_imap_email(raw_email: bytes):
         )
         
         prediction = classifier.predict(features)
+
+        authentication_results = {
+            'spf': spf_result,
+            'dkim': dkim_result,
+            'dmarc': dmarc_result,
+        }
+        alignment = compute_auth_alignment(email_data, authentication_results)
+
+        spf_pass = spf_result and spf_result.get('result') == 'pass'
+        dkim_pass = dkim_result and dkim_result.get('result') == 'pass'
+
+        if not dkim_pass or not spf_pass:
+            auth_header = email_data.get('authentication_results', '')
+            if not auth_header:
+                auth_header = email_data.get('headers', {}).get('Authentication-Results', '')
+            if isinstance(auth_header, list):
+                auth_header = ' '.join(auth_header)
+            auth_lower = auth_header.lower() if auth_header else ''
+            if not dkim_pass and 'dkim=pass' in auth_lower:
+                dkim_pass = True
+            if not spf_pass and 'spf=pass' in auth_lower:
+                spf_pass = True
+
+        sender_domain = email_data.get('from', {}).get('email', '').split('@')[-1].lower()
+        from_org = get_organizational_domain(sender_domain)
+        is_trusted = (
+            sender_domain in TRUSTED_SENDER_DOMAINS
+            or (from_org and from_org in TRUSTED_SENDER_DOMAINS)
+        )
+
+        factor = None
+        if alignment['dmarc_pass']:
+            factor = 0.25 if is_trusted else 0.5
+        elif spf_pass and dkim_pass:
+            factor = 0.4 if is_trusted else 0.6
+
+        if factor is not None:
+            prediction['confidence'] *= factor
+            if prediction['confidence'] < 0.5:
+                prediction['is_suspicious'] = False
+                prediction['risk_level'] = 'LOW'
+                prediction['recommendation'] = 'ALLOW'
+            elif prediction['confidence'] < 0.8:
+                prediction['risk_level'] = 'MEDIUM'
+                prediction['recommendation'] = 'FLAG'
+
         update_statistics(prediction['is_suspicious'])
-        
+
         if prediction['is_suspicious']:
-            alert_id = f"IMAP_{datetime.now().strftime('%Y%m%d%H%M%S')}_{len(alerts)}"
+            alert_id = f"IMAP_{uuid.uuid4().hex[:12]}"
             indicators = []
             if spf_result and spf_result.get('result') in ('fail', 'softfail'):
                 indicators.append(f"SPF_{spf_result['result'].upper()}")
-            if dkim_result and not dkim_result.get('valid'):
-                indicators.append("DKIM_INVALID")
+            if dkim_result and dkim_result.get('result') == 'fail':
+                indicators.append("DKIM_FAIL")
+            if header_analysis.get('from_mismatch') and not (
+                alignment['envelope_aligned'] or alignment['dmarc_pass']
+            ):
+                indicators.append("FROM_RETURN_PATH_MISMATCH")
             save_alert(alert_id, email_data, prediction, None, indicators)
             
         logger.info(f"IMAP: przetworzono e-mail od {email_data.get('from', {}).get('email', '?')}, "
@@ -484,7 +659,7 @@ def _process_imap_email(raw_email: bytes):
 
 @app.post("/api/imap/start")
 async def start_imap_monitoring(background_tasks: BackgroundTasks):
-    """Uruchamia ciągłe monitorowanie skrzynki IMAP"""
+    """monitorowanie skrzynki IMAP"""
     global imap_monitor_active, imap_monitor_thread
     
     if imap_monitor_active:
@@ -495,11 +670,10 @@ async def start_imap_monitoring(background_tasks: BackgroundTasks):
         raise HTTPException(status_code=400,
                             detail="Brak konfiguracji IMAP w config/config.yaml")
     
-    import threading
-    
     def run_monitor():
         global imap_monitor_active
         imap_monitor_active = True
+        interval = imap_config.get('check_interval', 60)
         try:
             client = IMAPClient(
                 server=imap_config['server'],
@@ -509,14 +683,32 @@ async def start_imap_monitoring(background_tasks: BackgroundTasks):
                 use_ssl=imap_config.get('ssl', True),
                 folder=imap_config.get('folder', 'INBOX')
             )
-            client.monitor_continuous(
-                callback=_process_imap_email,
-                interval=imap_config.get('check_interval', 60)
-            )
+            if not client.connect():
+                logger.error("IMAP: nie udało się połączyć")
+                return
+
+            logger.info(f"IMAP: start monitorowania (interwał: {interval}s)")
+            while imap_monitor_active:
+                new_emails = client.fetch_new_emails(mark_as_seen=True)
+                for raw_email in new_emails:
+                    if not imap_monitor_active:
+                        break
+                    try:
+                        _process_imap_email(raw_email)
+                    except Exception as e:
+                        logger.error(f"IMAP: błąd przetwarzania: {e}")
+                for _ in range(interval):
+                    if not imap_monitor_active:
+                        break
+                    import time
+                    time.sleep(1)
+
+            client.disconnect()
         except Exception as e:
             logger.error(f"Błąd monitorowania IMAP: {e}")
         finally:
             imap_monitor_active = False
+            logger.info("IMAP: monitorowanie zatrzymane")
     
     imap_monitor_thread = threading.Thread(target=run_monitor, daemon=True)
     imap_monitor_thread.start()
@@ -533,7 +725,7 @@ async def stop_imap_monitoring():
         return {"status": "not_running", "message": "Monitorowanie IMAP nie jest aktywne"}
     
     imap_monitor_active = False
-    return {"status": "stopped", "message": "Monitorowanie IMAP zatrzymane"}
+    return {"status": "stopping", "message": "Zatrzymywanie monitorowania IMAP..."}
 
 
 @app.get("/api/imap/status")
@@ -545,7 +737,6 @@ async def get_imap_status():
     }
 
 
-# Uruchomienie aplikacji
 def main():
     """Główna funkcja uruchamiająca API"""
     import uvicorn

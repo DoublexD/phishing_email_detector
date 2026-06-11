@@ -16,20 +16,10 @@ def setup_logging(log_level: str = "INFO",
                  log_file: Optional[str] = None,
                  log_format: str = "json") -> logging.Logger:
     """
-    Konfiguruje system logowania
-    
-    Args:
-        log_level: Poziom logowania (DEBUG, INFO, WARNING, ERROR)
-        log_file: Ścieżka do pliku logów (opcjonalne)
-        log_format: Format logów (json lub text)
-        
-    Returns:
-        Skonfigurowany logger
+    Konfiguruje logowanie aplikacji: ustawia poziom, format oraz opcjonalny zapis do pliku.
     """
-    # Konwertuj poziom logowania
     numeric_level = getattr(logging, log_level.upper(), logging.INFO)
-    
-    # Konfiguracja formattera
+
     if log_format == "json":
         from pythonjsonlogger import jsonlogger
         formatter = jsonlogger.JsonFormatter(
@@ -39,16 +29,13 @@ def setup_logging(log_level: str = "INFO",
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
-    
-    # Konfiguracja handlera
+
     handlers = []
-    
-    # Console handler
+
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
     handlers.append(console_handler)
-    
-    # File handler (jeśli określono)
+
     if log_file:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -56,8 +43,7 @@ def setup_logging(log_level: str = "INFO",
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(formatter)
         handlers.append(file_handler)
-    
-    # Konfiguracja root loggera
+
     logging.basicConfig(
         level=numeric_level,
         handlers=handlers
@@ -72,12 +58,6 @@ def setup_logging(log_level: str = "INFO",
 def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
     """
     Ładuje plik konfiguracyjny YAML
-    
-    Args:
-        config_path: Ścieżka do pliku konfiguracyjnego
-        
-    Returns:
-        Słownik z konfiguracją
     """
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
@@ -92,14 +72,6 @@ def load_config(config_path: str = "config/config.yaml") -> Dict[str, Any]:
 
 
 def save_json(data: Any, file_path: str, indent: int = 2):
-    """
-    Zapisuje dane do pliku JSON
-    
-    Args:
-        data: Dane do zapisania
-        file_path: Ścieżka do pliku
-        indent: Wcięcie JSON
-    """
     path = Path(file_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     
@@ -108,15 +80,6 @@ def save_json(data: Any, file_path: str, indent: int = 2):
 
 
 def load_json(file_path: str) -> Any:
-    """
-    Ładuje dane z pliku JSON
-    
-    Args:
-        file_path: Ścieżka do pliku
-        
-    Returns:
-        Załadowane dane
-    """
     with open(file_path, 'r', encoding='utf-8') as f:
         return json.load(f)
 
@@ -124,13 +87,6 @@ def load_json(file_path: str) -> Any:
 def calculate_metrics(y_true, y_pred) -> Dict[str, float]:
     """
     Oblicza metryki klasyfikacji
-    
-    Args:
-        y_true: Prawdziwe etykiety
-        y_pred: Predykcje
-        
-    Returns:
-        Słownik z metrykami
     """
     from sklearn.metrics import (
         accuracy_score, precision_score, recall_score, 
@@ -143,52 +99,39 @@ def calculate_metrics(y_true, y_pred) -> Dict[str, float]:
         'recall': recall_score(y_true, y_pred, average='binary'),
         'f1_score': f1_score(y_true, y_pred, average='binary'),
     }
-    
-    # Macierz pomyłek
+
     cm = confusion_matrix(y_true, y_pred)
     metrics['true_negatives'] = int(cm[0][0])
     metrics['false_positives'] = int(cm[0][1])
     metrics['false_negatives'] = int(cm[1][0])
     metrics['true_positives'] = int(cm[1][1])
-    
-    # ROC AUC (jeśli są dostępne prawdopodobieństwa)
+
     try:
         metrics['roc_auc'] = roc_auc_score(y_true, y_pred)
-    except:
+    except (ValueError, TypeError):
         pass
     
     return metrics
 
 
 def get_timestamp() -> str:
-    """Zwraca aktualny timestamp w formacie ISO"""
     return datetime.now().isoformat()
 
 
 def create_directory(path: str):
-    """Tworzy katalog jeśli nie istnieje"""
     Path(path).mkdir(parents=True, exist_ok=True)
 
 
 def file_exists(path: str) -> bool:
-    """Sprawdza czy plik istnieje"""
     return Path(path).exists()
 
 
 def sanitize_filename(filename: str) -> str:
     """
     Czyści nazwę pliku z nieprawidłowych znaków
-    
-    Args:
-        filename: Nazwa pliku do wyczyszczenia
-        
-    Returns:
-        Wyczyszczona nazwa pliku
     """
     import re
-    # Usuń znaki specjalne
     filename = re.sub(r'[<>:"/\\|?*]', '', filename)
-    # Ogranicz długość
     if len(filename) > 255:
         filename = filename[:255]
     return filename
@@ -197,12 +140,6 @@ def sanitize_filename(filename: str) -> str:
 def format_file_size(size_bytes: int) -> str:
     """
     Formatuje rozmiar pliku do czytelnej formy
-    
-    Args:
-        size_bytes: Rozmiar w bajtach
-        
-    Returns:
-        Sformatowany rozmiar (np. "1.5 MB")
     """
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
         if size_bytes < 1024.0:
@@ -214,12 +151,6 @@ def format_file_size(size_bytes: int) -> str:
 def extract_domain(email: str) -> Optional[str]:
     """
     Ekstrahuje domenę z adresu e-mail
-    
-    Args:
-        email: Adres e-mail
-        
-    Returns:
-        Domena lub None
     """
     if '@' in email:
         return email.split('@')[1].lower()

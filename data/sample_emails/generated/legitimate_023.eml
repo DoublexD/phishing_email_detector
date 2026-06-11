@@ -1,0 +1,27 @@
+From: "InPost" <powiadomienia@inpost.pl>
+Return-Path: <noreply@inpost.pl>
+To: odbiorca@example.com
+Subject: Paczka EU694768704PL czeka w paczkomacie
+Date: Sat, 23 May 2026 15:20:05 +0200
+Message-ID: <fb4ff9f689c54c07bab0a1ca9335964d@inpost.pl>
+X-Mailer: SendGrid
+Received: from o1.email.inpost.pl ([28.181.161.17]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=inpost.pl; dkim=pass header.d=inpost.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Witaj,
+
+Twoja paczka jest gotowa do odbioru.
+
+- Numer paczki: EU694768704PL
+- Lokalizacja: Paczkomat WAW76M, Poznań
+- Kod odbioru zostanie wysłany SMS-em
+- Czas na odbiór: 48 godzin
+
+Adres do nawigacji oraz status przesyłki dostępne są w aplikacji
+InPost (sklepy Google Play i App Store).
+
+Dziękujemy za wybór naszych usług.
+InPost

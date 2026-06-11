@@ -8,6 +8,8 @@ import checkdmarc
 from typing import Dict, Any, Optional
 import logging
 
+from utils.domain_utils import get_organizational_domain
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,8 +20,6 @@ class DMARCChecker:
         """
         Inicjalizacja sprawdzarki DMARC
         
-        Args:
-            timeout: Timeout dla zapytań DNS (sekundy)
         """
         self.timeout = timeout
     
@@ -27,11 +27,6 @@ class DMARCChecker:
         """
         Sprawdza politykę DMARC dla domeny
         
-        Args:
-            domain: Domena do sprawdzenia
-            
-        Returns:
-            Wyniki sprawdzenia DMARC
         """
         result = {
             'valid': False,
@@ -41,25 +36,43 @@ class DMARCChecker:
             'percentage': 100,
             'alignment': {},
             'reporting': {},
+            'matched_domain': None,
             'errors': []
         }
         
         try:
-            # Pobierz rekord DMARC
             dmarc_record = self.get_dmarc_record(domain)
-            
+            matched_domain = domain
+
+            if not dmarc_record:
+                org_domain = get_organizational_domain(domain)
+                if org_domain and org_domain != domain:
+                    org_record = self.get_dmarc_record(org_domain)
+                    if org_record:
+                        dmarc_record = org_record
+                        matched_domain = org_domain
+
             if not dmarc_record:
                 result['errors'].append('Brak rekordu DMARC')
                 return result
-            
+
             result['record'] = dmarc_record
-            
-            # Parsuj rekord
+            result['matched_domain'] = matched_domain
+
             parsed = self._parse_dmarc_record(dmarc_record)
             result.update(parsed)
+
+            if matched_domain != domain:
+                subdomain_policy = parsed.get('subdomain_policy')
+                if subdomain_policy and subdomain_policy != 'none':
+                    result['policy'] = subdomain_policy
+
             result['valid'] = True
-            
-            logger.info(f"DMARC check for {domain}: policy={parsed['policy']}")
+
+            logger.info(
+                f"DMARC check for {domain}: policy={result['policy']} "
+                f"(rekord z {matched_domain})"
+            )
             
         except Exception as e:
             logger.error(f"Błąd sprawdzania DMARC: {e}")
@@ -71,11 +84,6 @@ class DMARCChecker:
         """
         Pobiera rekord DMARC dla domeny
         
-        Args:
-            domain: Domena do sprawdzenia
-            
-        Returns:
-            Rekord DMARC lub None
         """
         try:
             dmarc_domain = f"_dmarc.{domain}"
@@ -102,19 +110,14 @@ class DMARCChecker:
         """
         Parsuje rekord DMARC
         
-        Args:
-            dmarc_record: Rekord DMARC do sparsowania
-            
-        Returns:
-            Sparsowane komponenty rekordu
         """
         parsed = {
             'policy': 'none',
             'subdomain_policy': 'none',
             'percentage': 100,
             'alignment': {
-                'spf': 'r',  # relaxed
-                'dkim': 'r'  # relaxed
+                'spf': 'r',
+                'dkim': 'r'
             },
             'reporting': {
                 'aggregate': [],
@@ -122,8 +125,7 @@ class DMARCChecker:
             },
             'options': {}
         }
-        
-        # Parsuj pary tag=value
+
         parts = dmarc_record.split(';')
         for part in parts:
             part = part.strip()
@@ -163,32 +165,21 @@ class DMARCChecker:
         """
         Sprawdza alignment (zgodność) SPF i DKIM z DMARC
         
-        Args:
-            spf_result: Wynik sprawdzenia SPF
-            dkim_result: Wynik sprawdzenia DKIM
-            from_domain: Domena z pola From
-            
-        Returns:
-            Wyniki sprawdzenia alignment
         """
         alignment = {
             'spf_aligned': False,
             'dkim_aligned': False,
             'dmarc_pass': False
         }
-        
-        # Pobierz politykę DMARC
-        dmarc_policy = self.check_dmarc(from_domain)
-        
-        # Sprawdź alignment SPF
+
+        self.check_dmarc(from_domain)
+
         if spf_result.get('valid'):
             alignment['spf_aligned'] = True
-        
-        # Sprawdź alignment DKIM
+
         if dkim_result.get('valid'):
             alignment['dkim_aligned'] = True
-        
-        # DMARC pass wymaga przynajmniej jednego aligned mechanism
+
         alignment['dmarc_pass'] = (
             alignment['spf_aligned'] or alignment['dkim_aligned']
         )
@@ -199,13 +190,7 @@ class DMARCChecker:
         """
         Sprawdza DMARC na podstawie wyparsowanych danych e-maila
         
-        Args:
-            email_data: Wyparsowane dane e-maila
-            
-        Returns:
-            Wyniki sprawdzenia DMARC
         """
-        # Pobierz domenę nadawcy
         from_email = email_data.get('from', {}).get('email', '')
         if not from_email or '@' not in from_email:
             logger.warning("Brak lub nieprawidłowy adres nadawcy")
@@ -221,11 +206,6 @@ class DMARCChecker:
         """
         Zwraca rekomendowaną akcję na podstawie polityki DMARC
         
-        Args:
-            policy: Polityka DMARC (none, quarantine, reject)
-            
-        Returns:
-            Rekomendowana akcja
         """
         actions = {
             'none': 'ALLOW',

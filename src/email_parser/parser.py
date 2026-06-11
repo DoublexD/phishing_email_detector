@@ -4,6 +4,7 @@ Parsowanie wiadomości e-mail i ekstrakcja podstawowych informacji
 """
 
 import email
+import email.message
 import base64
 import re
 from email import policy
@@ -22,15 +23,6 @@ class EmailParser:
         self.parser = BytesParser(policy=policy.default)
     
     def parse_raw_email(self, raw_email: bytes) -> Dict[str, Any]:
-        """
-        Parsuje surową wiadomość e-mail
-        
-        Args:
-            raw_email: Surowa wiadomość w formacie bajtów
-            
-        Returns:
-            Słownik z wyparsowanymi danymi
-        """
         try:
             msg = self.parser.parsebytes(raw_email)
             return self._extract_email_data(msg)
@@ -39,15 +31,6 @@ class EmailParser:
             raise
     
     def parse_email_string(self, email_string: str) -> Dict[str, Any]:
-        """
-        Parsuje wiadomość e-mail z formatu string
-        
-        Args:
-            email_string: Wiadomość w formacie string
-            
-        Returns:
-            Słownik z wyparsowanymi danymi
-        """
         return self.parse_raw_email(email_string.encode('utf-8'))
     
     def _extract_email_data(self, msg: email.message.EmailMessage) -> Dict[str, Any]:
@@ -78,11 +61,9 @@ class EmailParser:
         return email_data
     
     def _extract_headers(self, msg: email.message.EmailMessage) -> Dict[str, str]:
-        """Ekstrahuje wszystkie nagłówki"""
         headers = {}
         for key, value in msg.items():
             if key in headers:
-                # Jeśli nagłówek się powtarza, konwertuj na listę
                 if not isinstance(headers[key], list):
                     headers[key] = [headers[key]]
                 headers[key].append(value)
@@ -91,11 +72,9 @@ class EmailParser:
         return headers
     
     def _parse_email_address(self, address_str: str) -> Dict[str, str]:
-        """Parsuje adres e-mail"""
         if not address_str:
             return {'name': '', 'email': ''}
-        
-        # Używamy email.utils do parsowania adresu
+
         from email.utils import parseaddr
         name, email_addr = parseaddr(address_str)
         
@@ -118,16 +97,55 @@ class EmailParser:
         ]
     
     def _parse_date(self, date_str: str) -> Optional[datetime]:
-        """Parsuje datę z nagłówka"""
+        """Parsuje datę z nagłówka Date"""
         if not date_str:
             return None
-        
-        try:
-            from email.utils import parsedate_to_datetime
-            return parsedate_to_datetime(date_str)
-        except Exception as e:
-            logger.warning(f"Nie można sparsować daty: {date_str}, błąd: {e}")
+        s = date_str.strip()
+        if not s:
             return None
+
+        from email.utils import parsedate_to_datetime
+        try:
+            return parsedate_to_datetime(s)
+        except (TypeError, ValueError):
+            pass
+
+        try:
+            from dateutil import parser as date_parser
+        except ImportError:
+            date_parser = None
+
+        if date_parser:
+            try:
+                return date_parser.parse(s, dayfirst=True)
+            except (ValueError, OverflowError, TypeError):
+                pass
+
+        rfc_infix = re.search(
+            r'(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s+\d{1,2}\s+\w{3}\s+\d{4}\s+[\d:]+\s*'
+            r'(?:[+-]\d{4}|[+-]\d{2}:\d{2}|\w+)?',
+            s,
+            re.IGNORECASE,
+        )
+        if rfc_infix:
+            frag = rfc_infix.group(0)
+            try:
+                return parsedate_to_datetime(frag)
+            except (TypeError, ValueError):
+                if date_parser:
+                    try:
+                        return date_parser.parse(frag)
+                    except (ValueError, OverflowError, TypeError):
+                        pass
+
+        if date_parser:
+            try:
+                return date_parser.parse(s, fuzzy=True)
+            except (ValueError, OverflowError, TypeError):
+                pass
+
+        logger.debug("Nie można sparsować daty: %r", s[:120])
+        return None
     
     def _extract_received_headers(self, msg: email.message.EmailMessage) -> List[Dict[str, Any]]:
         """Ekstrahuje i parsuje nagłówki Received"""
@@ -143,15 +161,12 @@ class EmailParser:
     def _parse_received_header(self, header: str) -> Optional[Dict[str, Any]]:
         """Parsuje pojedynczy nagłówek Received"""
         try:
-            # Ekstrakcja IP
             ip_pattern = r'\[(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\]'
             ip_match = re.search(ip_pattern, header)
-            
-            # Ekstrakcja daty
+
             date_pattern = r';\s*(.+)$'
             date_match = re.search(date_pattern, header)
-            
-            # Ekstrakcja hosta
+
             from_pattern = r'from\s+([^\s\[]+)'
             from_match = re.search(from_pattern, header)
             
@@ -214,21 +229,19 @@ class EmailParser:
         return attachments
     
     def extract_urls(self, text: str) -> List[str]:
-        """Ekstrahuje URL-e z tekstu"""
+        """Ekstrahuje URL z tekstu"""
         url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
         return re.findall(url_pattern, text)
     
     def get_all_urls(self, email_data: Dict[str, Any]) -> List[str]:
-        """Ekstrahuje wszystkie URL-e z wiadomości"""
+        """Ekstrahuje wszystkie URL z wiadomości"""
         urls = []
-        
-        # Z treści plaintext
+
         if email_data.get('body', {}).get('plain'):
             urls.extend(self.extract_urls(email_data['body']['plain']))
-        
-        # Z treści HTML
+
         if email_data.get('body', {}).get('html'):
             urls.extend(self.extract_urls(email_data['body']['html']))
-        
-        return list(set(urls))  # Unikalne URL-e
+
+        return list(set(urls))
 

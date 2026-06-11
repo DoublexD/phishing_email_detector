@@ -1,0 +1,26 @@
+From: "DHL Express Powiadomienia" <powiadomienia@dhl.info>
+Reply-To: noreply@dhl.info
+Return-Path: <noreply@dhl.info>
+To: odbiorca@example.com
+Subject: Paczka wstrzymana w sortowni - wymagana dopłata
+Date: Mon, 18 May 2026 18:35:05 +0200
+Message-ID: <51e1034d5a0b40d7a67ac5d15974f3f3@dhl.info>
+X-Mailer: PHPMailer 6.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Witaj,
+
+Twoja przesyłka o numerze PL614015466XX została wstrzymana w naszej sortowni
+w Warszawa z powodu niedopłaty w wysokości 11,23 zł.
+
+Aby kontynuować doręczenie, opłać brakującą kwotę online:
+https://dhl.info/panel/login.php
+
+Czas na opłatę: 48 godzin. Po tym okresie przesyłka zostanie zwrócona
+do nadawcy, a Ty otrzymasz powiadomienie o kosztach magazynowania.
+
+Wybierz wygodny termin doręczenia po opłaceniu.
+
+DHL Express

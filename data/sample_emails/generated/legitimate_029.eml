@@ -1,0 +1,30 @@
+From: "Allegro" <powiadomienia@allegro.pl>
+Return-Path: <bounce@allegro.pl>
+To: kupujacy@example.com
+Subject: Allegro: Potwierdzenie zamówienia #154318806
+Date: Wed, 13 May 2026 05:00:05 +0200
+Message-ID: <2cc2fd3877ba424ea22f0f206c920028@allegro.pl>
+X-Mailer: Mailjet
+Received: from mta.allegro.pl (mta.allegro.pl [52.104.124.125]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=allegro.pl; dkim=pass header.d=allegro.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Cześć,
+
+Dziękujemy za zakup w serwisie Allegro!
+
+Szczegóły zamówienia:
+- Numer: 154318806
+- Kwota: 4448,01 zł
+- Status: Opłacone
+- Szacowana dostawa: 25.05.2026
+
+Status zamówienia możesz śledzić w zakładce „Moje zakupy" po zalogowaniu.
+
+Pamiętaj o ocenie sprzedawcy po otrzymaniu przesyłki - pomaga to budować
+zaufaną społeczność użytkowników.
+
+Pozdrawiamy,
+Zespół Allegro

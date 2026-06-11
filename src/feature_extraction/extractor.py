@@ -17,12 +17,17 @@ logger = logging.getLogger(__name__)
 class FeatureExtractor:
     """Klasa do ekstrakcji cech z wiadomości e-mail"""
     
-    # Słowa kluczowe często występujące w phishingu
     SUSPICIOUS_KEYWORDS = [
         'urgent', 'verify', 'account', 'suspended', 'confirm', 'password',
         'click', 'immediately', 'expire', 'act now', 'limited time',
         'congratulations', 'winner', 'prize', 'free', 'bonus',
-        'security', 'alert', 'warning', 'problem', 'unusual activity'
+        'security', 'alert', 'warning', 'problem', 'unusual activity',
+        'pilne', 'zweryfikuj', 'konto', 'zablokowane', 'potwierdź',
+        'hasło', 'kliknij', 'natychmiast', 'wygasa', 'ograniczony czas',
+        'gratulacje', 'wygrana', 'nagroda', 'darmowy',
+        'bezpieczeństwo', 'ostrzeżenie',
+        'nietypowa aktywność', 'przelew', 'faktura', 'zaległość',
+        'odblokuj', 'weryfikacja', 'logowanie', 'zmiana hasła',
     ]
     
     def __init__(self):
@@ -37,38 +42,34 @@ class FeatureExtractor:
         """
         Ekstrahuje wszystkie cechy z wiadomości e-mail
         
-        Args:
-            email_data: Wyparsowane dane e-maila
-            spf_result: Wynik sprawdzenia SPF
-            dkim_result: Wynik sprawdzenia DKIM
-            dmarc_result: Wynik sprawdzenia DMARC
-            header_analysis: Analiza nagłówków
-            
-        Returns:
-            Seria pandas z cechami
         """
         features = {}
-        
-        # Cechy z autentykacji
+
         features.update(self._extract_auth_features(spf_result, dkim_result, dmarc_result))
-        
-        # Cechy z nagłówków
+
         features.update(self._extract_header_features(email_data, header_analysis))
-        
-        # Cechy czasowe
+
         features.update(self._extract_temporal_features(email_data))
-        
-        # Cechy z treści
+
         features.update(self._extract_content_features(email_data))
-        
-        # Cechy URL
+
         features.update(self._extract_url_features(email_data))
-        
-        # Cechy załączników
+
         features.update(self._extract_attachment_features(email_data))
-        
-        # Cechy adresu nadawcy
+
         features.update(self._extract_sender_features(email_data))
+
+        features.update(self._extract_subject_features(email_data))
+
+        features.update(self._extract_network_features(email_data))
+
+        features.update(self._extract_mta_auth_features(email_data))
+
+        features['auth_alignment_score'] = self._calculate_auth_alignment(
+            spf_result, dkim_result, dmarc_result
+        )
+
+        features['from_display_name_spoofing'] = self._detect_display_name_spoofing(email_data)
         
         self.feature_names = list(features.keys())
         return pd.Series(features)
@@ -79,32 +80,32 @@ class FeatureExtractor:
                                dmarc_result: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Ekstrahuje cechy z wyników autentykacji"""
         features = {
-            # SPF
             'spf_pass': 0,
             'spf_fail': 0,
             'spf_softfail': 0,
             'spf_neutral': 0,
             'spf_none': 0,
-            
-            # DKIM
+
             'dkim_valid': 0,
             'dkim_invalid': 0,
             'dkim_none': 0,
             'dkim_signature_count': 0,
-            
-            # DMARC
+
             'dmarc_policy_none': 0,
             'dmarc_policy_quarantine': 0,
             'dmarc_policy_reject': 0,
             'dmarc_exists': 0,
         }
-        
-        # SPF
+
         if spf_result:
             result = spf_result.get('result', 'none')
-            features[f'spf_{result}'] = 1
-        
-        # DKIM
+            if result in ('temperror', 'permerror'):
+                result = 'softfail'
+            if f'spf_{result}' in features:
+                features[f'spf_{result}'] = 1
+            else:
+                features['spf_none'] = 1
+
         if dkim_result:
             if dkim_result.get('valid'):
                 features['dkim_valid'] = 1
@@ -114,8 +115,7 @@ class FeatureExtractor:
                 features['dkim_none'] = 1
             
             features['dkim_signature_count'] = len(dkim_result.get('signatures', []))
-        
-        # DMARC
+
         if dmarc_result:
             if dmarc_result.get('valid'):
                 features['dmarc_exists'] = 1
@@ -144,8 +144,7 @@ class FeatureExtractor:
             features['from_return_path_mismatch'] = 1 if header_analysis.get('from_mismatch') else 0
             features['from_reply_to_mismatch'] = 1 if header_analysis.get('reply_to_mismatch') else 0
             features['anomaly_score'] = header_analysis.get('anomaly_score', 0.0)
-        
-        # Dodatkowe cechy z nagłówków
+
         features['has_x_mailer'] = 1 if email_data.get('x_mailer') else 0
         features['has_message_id'] = 1 if email_data.get('message_id') else 0
         
@@ -157,14 +156,14 @@ class FeatureExtractor:
             'hour_of_day': 0,
             'day_of_week': 0,
             'is_weekend': 0,
-            'is_night_time': 0,  # 22:00 - 6:00
+            'is_night_time': 0,
             'date_in_future': 0,
             'avg_hop_delay': 0.0,
             'max_hop_delay': 0.0,
         }
 
         def to_naive(dt):
-            """Konwertuje datetime do naive (bez timezone) przez utc offset."""
+            """Konwertuje datetime do naive"""
             if dt is None:
                 return None
             try:
@@ -175,7 +174,6 @@ class FeatureExtractor:
             except Exception:
                 return None
 
-        # Czas wysłania
         email_date = email_data.get('date')
         if email_date:
             try:
@@ -190,7 +188,6 @@ class FeatureExtractor:
             except Exception:
                 pass
 
-        # Opóźnienia między hopami
         received = email_data.get('received', [])
         delays = []
 
@@ -213,6 +210,16 @@ class FeatureExtractor:
 
         return features
     
+    @staticmethod
+    def _strip_html_to_text(html: str) -> str:
+        """Odcina tagi do heurystyk na samym tekście widocznym."""
+        if not html:
+            return ''
+        t = re.sub(r'(?is)<script[^>]*>.*?</script>', ' ', html)
+        t = re.sub(r'(?is)<style[^>]*>.*?</style>', ' ', t)
+        t = re.sub(r'<[^>]+>', ' ', t)
+        return re.sub(r'\s+', ' ', t).strip()
+    
     def _extract_content_features(self, email_data: Dict[str, Any]) -> Dict[str, Any]:
         """Ekstrahuje cechy z treści wiadomości"""
         features = {
@@ -227,31 +234,26 @@ class FeatureExtractor:
         }
         
         body = email_data.get('body', {})
-        plain_body = body.get('plain', '')
-        html_body = body.get('html', '')
-        
-        # Długość treści
+        plain_body = body.get('plain', '') or ''
+        html_body = body.get('html', '') or ''
+
         features['body_length'] = len(plain_body) + len(html_body)
         features['plain_body_present'] = 1 if plain_body else 0
         features['html_body_present'] = 1 if html_body else 0
+
+        combined_text = f'{plain_body}\n{html_body}'.lower()
         
-        # Analiza treści tekstowej
-        combined_text = plain_body.lower()
-        
-        # Podejrzane słowa kluczowe
         for keyword in self.SUSPICIOUS_KEYWORDS:
             if keyword in combined_text:
                 features['suspicious_keywords_count'] += 1
         
-        # Wykrzykniki
-        features['exclamation_count'] = plain_body.count('!')
-        
-        # Stosunek wielkich liter
-        if plain_body:
-            capitals = sum(1 for c in plain_body if c.isupper())
-            features['capital_letter_ratio'] = capitals / len(plain_body)
-        
-        # Analiza HTML
+        features['exclamation_count'] = plain_body.count('!') + html_body.count('!')
+
+        cap_sample = plain_body if plain_body else self._strip_html_to_text(html_body)
+        if cap_sample:
+            capitals = sum(1 for c in cap_sample if c.isupper())
+            features['capital_letter_ratio'] = capitals / len(cap_sample)
+
         if html_body:
             html_lower = html_body.lower()
             features['contains_form'] = 1 if '<form' in html_lower else 0
@@ -260,7 +262,7 @@ class FeatureExtractor:
         return features
     
     def _extract_url_features(self, email_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Ekstrahuje cechy z URL-i"""
+        """Ekstrahuje cechy z URL"""
         features = {
             'url_count': 0,
             'external_url_count': 0,
@@ -269,50 +271,47 @@ class FeatureExtractor:
             'suspicious_tld_count': 0,
             'url_domain_mismatch': 0,
         }
-        
-        # URL shorteners
+
         shorteners = ['bit.ly', 'goo.gl', 'tinyurl.com', 'ow.ly', 't.co']
         suspicious_tlds = ['.tk', '.ml', '.ga', '.cf', '.gq', '.xyz', '.top']
-        
-        # Pobierz domenę nadawcy
+
         from_email = email_data.get('from', {}).get('email', '')
-        from_domain = from_email.split('@')[-1] if '@' in from_email else ''
-        
-        # Ekstrahuj URL-e z treści
+        from_domain = ''
+        if '@' in from_email:
+            from_extracted = tldextract.extract(from_email.split('@')[-1])
+            from_domain = f"{from_extracted.domain}.{from_extracted.suffix}"
+
         body = email_data.get('body', {})
         text = body.get('plain', '') + body.get('html', '')
         urls = self._extract_urls(text)
-        
+
+        seen_domains = set()
         features['url_count'] = len(urls)
         
         for url in urls:
-            # IP address w URL
             if re.search(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', url):
                 features['ip_address_url_count'] += 1
-            
-            # URL shortener
+
             for shortener in shorteners:
                 if shortener in url:
                     features['shortened_url_count'] += 1
                     break
-            
-            # Podejrzane TLD
+
             for tld in suspicious_tlds:
                 if url.endswith(tld) or tld + '/' in url:
                     features['suspicious_tld_count'] += 1
                     break
-            
-            # Niezgodność domeny
+
             try:
                 extracted = tldextract.extract(url)
                 url_domain = f"{extracted.domain}.{extracted.suffix}"
                 
-                if from_domain and url_domain != from_domain:
+                if from_domain and url_domain != from_domain and url_domain not in seen_domains:
                     features['external_url_count'] += 1
-            except:
+                    seen_domains.add(url_domain)
+            except Exception:
                 pass
-        
-        # Sprawdź czy są external URLs
+
         if features['url_count'] > 0:
             features['url_domain_mismatch'] = 1 if features['external_url_count'] > 0 else 0
         
@@ -340,8 +339,7 @@ class FeatureExtractor:
             size = attachment.get('size', 0)
             
             features['total_attachment_size'] += size
-            
-            # Sprawdź rozszerzenia
+
             if any(filename.endswith(ext) for ext in executable_extensions):
                 features['has_executable'] = 1
             
@@ -365,8 +363,7 @@ class FeatureExtractor:
             'cc_count': 0,
             'bcc_count': 0,
         }
-        
-        # From
+
         from_data = email_data.get('from', {})
         from_name = from_data.get('name', '')
         from_email = from_data.get('email', '')
@@ -379,21 +376,196 @@ class FeatureExtractor:
         if '@' in from_email:
             domain = from_email.split('@')[1]
             features['from_domain_length'] = len(domain)
-        
-        # Recipients
+
         features['to_count'] = len(email_data.get('to', []))
         features['cc_count'] = len(email_data.get('cc', []))
         features['bcc_count'] = len(email_data.get('bcc', []))
         
         return features
     
+    def _extract_subject_features(self, email_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Ekstrahuje cechy z tematu wiadomości"""
+        features = {
+            'subject_length': 0,
+            'subject_word_count': 0,
+            'subject_has_urgent': 0,
+            'subject_has_re_fw': 0,
+            'subject_suspicious_keywords': 0,
+            'subject_has_special_chars': 0,
+            'subject_capital_ratio': 0.0,
+            'subject_exclamation_count': 0,
+        }
+        
+        subject = email_data.get('subject', '') or ''
+        features['subject_length'] = len(subject)
+        features['subject_word_count'] = len(subject.split())
+        
+        subject_lower = subject.lower()
+        
+        urgent_words = [
+            'urgent', 'immediate', 'action required', 'act now',
+            'warning', 'alert', 'important', 'attention', 'asap',
+            'pilne', 'natychmiast', 'uwaga', 'ostrzeżenie',
+        ]
+        features['subject_has_urgent'] = 1 if any(w in subject_lower for w in urgent_words) else 0
+        
+        features['subject_has_re_fw'] = 1 if re.match(r'^(re|fw|fwd)\s*:', subject_lower) else 0
+        
+        for keyword in self.SUSPICIOUS_KEYWORDS:
+            if keyword in subject_lower:
+                features['subject_suspicious_keywords'] += 1
+        
+        features['subject_has_special_chars'] = 1 if re.search(r'[^\w\s.,!?:;\'-]', subject) else 0
+        
+        if subject:
+            capitals = sum(1 for c in subject if c.isupper())
+            features['subject_capital_ratio'] = capitals / len(subject)
+            features['subject_exclamation_count'] = subject.count('!')
+        
+        return features
+    
+    def _extract_network_features(self, email_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Ekstrahuje cechy sieciowe z łańcucha Received (adresy IP, hosty)"""
+        features = {
+            'received_ip_count': 0,
+            'received_unique_ip_count': 0,
+            'received_has_private_ip': 0,
+            'received_hostname_count': 0,
+            'received_chain_length': 0,
+            'header_count': 0,
+        }
+        
+        received = email_data.get('received', [])
+        features['received_chain_length'] = len(received)
+        
+        ip_pattern = re.compile(r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})')
+        private_ip_pattern = re.compile(
+            r'^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.)'
+        )
+        
+        all_ips = []
+        hostnames = set()
+        
+        for hop in received:
+            from_host = hop.get('from_host', '') or ''
+            by_host = hop.get('by_host', '') or ''
+            raw = hop.get('raw', '') or ''
+            
+            text = f"{from_host} {by_host} {raw}"
+            
+            ips_found = ip_pattern.findall(text)
+            all_ips.extend(ips_found)
+            
+            for ip in ips_found:
+                if private_ip_pattern.match(ip):
+                    features['received_has_private_ip'] = 1
+            
+            if from_host and not ip_pattern.fullmatch(from_host):
+                hostnames.add(from_host)
+            if by_host and not ip_pattern.fullmatch(by_host):
+                hostnames.add(by_host)
+        
+        features['received_ip_count'] = len(all_ips)
+        features['received_unique_ip_count'] = len(set(all_ips))
+        features['received_hostname_count'] = len(hostnames)
+        
+        headers = email_data.get('headers', {})
+        features['header_count'] = len(headers)
+        
+        return features
+    
+    def _extract_mta_auth_features(self, email_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Ekstrahuje cechy z nagłówka Authentication-Results wstawionego przez serwer pocztowy(MTA) odbiorczy."""
+        features = {
+            'mta_spf_pass': 0,
+            'mta_dkim_pass': 0,
+            'mta_dmarc_pass': 0,
+            'mta_auth_score': 0,
+        }
+
+        auth_header = email_data.get('authentication_results', '')
+        if not auth_header:
+            auth_header = email_data.get('headers', {}).get('Authentication-Results', '')
+        if isinstance(auth_header, list):
+            auth_header = ' '.join(auth_header)
+        if not auth_header:
+            return features
+
+        auth_lower = auth_header.lower()
+        if 'spf=pass' in auth_lower:
+            features['mta_spf_pass'] = 1
+        if 'dkim=pass' in auth_lower:
+            features['mta_dkim_pass'] = 1
+        if 'dmarc=pass' in auth_lower:
+            features['mta_dmarc_pass'] = 1
+
+        features['mta_auth_score'] = (
+            features['mta_spf_pass'] + features['mta_dkim_pass'] + features['mta_dmarc_pass']
+        )
+        return features
+
+    def _calculate_auth_alignment(self,
+                                   spf_result: Optional[Dict[str, Any]],
+                                   dkim_result: Optional[Dict[str, Any]],
+                                   dmarc_result: Optional[Dict[str, Any]]) -> float:
+        """
+        Oblicza łączny wynik alignment autentykacji (0.0 = brak/fail, 1.0 = wszystko pass).
+        Silniejsza cecha niż poszczególne flagi SPF/DKIM/DMARC.
+        """
+        score = 0.0
+        checks = 0
+        
+        if spf_result:
+            checks += 1
+            result = spf_result.get('result', 'none')
+            if result == 'pass':
+                score += 1.0
+            elif result == 'softfail':
+                score += 0.3
+            elif result == 'neutral':
+                score += 0.5
+        
+        if dkim_result:
+            checks += 1
+            if dkim_result.get('valid'):
+                score += 1.0
+        
+        if dmarc_result:
+            checks += 1
+            if dmarc_result.get('valid'):
+                policy = dmarc_result.get('policy', 'none')
+                if policy == 'reject':
+                    score += 1.0
+                elif policy == 'quarantine':
+                    score += 0.7
+                else:
+                    score += 0.4
+        
+        return score / checks if checks > 0 else 0.0
+    
+    def _detect_display_name_spoofing(self, email_data: Dict[str, Any]) -> int:
+        """
+        Wykrywa spoofing display name 
+        """
+        from_data = email_data.get('from', {})
+        from_name = from_data.get('name', '') or ''
+        from_email = from_data.get('email', '') or ''
+        
+        email_in_name = re.search(r'[\w.\-+]+@[\w.\-]+\.\w+', from_name)
+        if email_in_name:
+            embedded_email = email_in_name.group(0).lower()
+            if embedded_email != from_email.lower():
+                return 1
+        
+        return 0
+    
     def _extract_urls(self, text: str) -> List[str]:
-        """Ekstrahuje URL-e z tekstu"""
+        """Ekstrahuje URL z tekstu"""
         url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
         return re.findall(url_pattern, text)
     
     def get_feature_names(self) -> List[str]:
-        """Zwraca nazwy wszystkich cech"""
+        """Zwraca nazwy cech"""
         return self.feature_names
     
     def extract_batch(self, 
@@ -402,17 +574,10 @@ class FeatureExtractor:
         """
         Ekstrahuje cechy z wielu wiadomości
         
-        Args:
-            email_data_list: Lista wyparsowanych wiadomości
-            **kwargs: Dodatkowe parametry (spf_results, dkim_results, etc.)
-            
-        Returns:
-            DataFrame z cechami
         """
         features_list = []
         
         for i, email_data in enumerate(email_data_list):
-            # Pobierz odpowiadające wyniki autentykacji
             spf_result = kwargs.get('spf_results', [None])[i] if 'spf_results' in kwargs else None
             dkim_result = kwargs.get('dkim_results', [None])[i] if 'dkim_results' in kwargs else None
             dmarc_result = kwargs.get('dmarc_results', [None])[i] if 'dmarc_results' in kwargs else None

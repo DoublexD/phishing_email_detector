@@ -1,0 +1,25 @@
+From: "Santander Bank Polska - Bezpieczeństwo" <obsluga@santander-system.link>
+Reply-To: noreply@contact2025.site
+Return-Path: <bounce@santander-system.link>
+To: klient@example.com
+Subject: Próba nieautoryzowanego logowania - Santander Bank Polska
+Date: Mon, 18 May 2026 18:05:05 +0200
+Message-ID: <0121f405a58c48f0a40f3ea945f22078@santander-system.link>
+X-Mailer: PHPMailer 5.2.9
+Received: from unknown (89.27.148.8) by mail.example.com
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Drogi Kliencie Łukasz Piotrowski,
+
+Z dniem dzisiejszym Twoje konto bankowe zostało tymczasowo zawieszone
+z powodu zaległej weryfikacji danych. Aby przywrócić dostęp do bankowości
+elektronicznej, kliknij w poniższy link i potwierdź swoją tożsamość:
+
+http://15.78.122.34/secure
+
+UWAGA: Niezweryfikowanie konta w ciągu 12 godzin spowoduje jego trwałe
+zablokowanie i przekazanie sprawy do windykacji.
+
+Zespół Santander Bank Polska

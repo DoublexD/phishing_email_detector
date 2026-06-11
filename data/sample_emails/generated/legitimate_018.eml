@@ -1,0 +1,27 @@
+From: "DPD Polska" <powiadomienia@dpd.com.pl>
+Return-Path: <noreply@dpd.com.pl>
+To: odbiorca@example.com
+Subject: Paczka EU936043811PL czeka w paczkomacie
+Date: Fri, 01 May 2026 17:30:05 +0200
+Message-ID: <b1a7f1e970b54a38aee76ec9984bd0ca@dpd.com.pl>
+X-Mailer: SendGrid
+Received: from o1.email.dpd.com.pl ([14.28.237.94]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=dpd.com.pl; dkim=pass header.d=dpd.com.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Witaj,
+
+Twoja paczka jest gotowa do odbioru.
+
+- Numer paczki: EU936043811PL
+- Lokalizacja: Paczkomat WAW77M, Łódź
+- Kod odbioru zostanie wysłany SMS-em
+- Czas na odbiór: 48 godzin
+
+Adres do nawigacji oraz status przesyłki dostępne są w aplikacji
+DPD Polska (sklepy Google Play i App Store).
+
+Dziękujemy za wybór naszych usług.
+DPD Polska

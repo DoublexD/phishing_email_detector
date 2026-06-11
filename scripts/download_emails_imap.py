@@ -9,13 +9,11 @@ from email_parser.imap_client import IMAPClient
 from pathlib import Path
 from datetime import datetime
 
-# Konfiguracja (ZMIEŃ NA SWOJE DANE!)
 IMAP_CONFIG = {
-    'server': 'imap.gmail.com',  # Dla Gmail
-    # 'server': 'outlook.office365.com',  # Dla Outlook
+    'server': 'imap.gmail.com',
     'port': 993,
-    'username': 'your-email@gmail.com',  # ZMIEŃ!
-    'password': 'your-app-password',     # ZMIEŃ! (App Password, nie zwykłe hasło)
+    'username': 'your-email@gmail.com',
+    'password': 'your-app-password',
     'folder': 'INBOX',
     'use_ssl': True
 }
@@ -32,8 +30,7 @@ def download_emails(max_emails=10, output_dir='data/raw'):
     print("=" * 60)
     print("POBIERANIE E-MAILI Z SERWERA IMAP")
     print("=" * 60)
-    
-    # Sprawdź konfigurację
+
     if 'your-email' in IMAP_CONFIG['username']:
         print("\n BŁĄD: Musisz skonfigurować IMAP_CONFIG!")
         print("\nEdytuj scripts/download_emails_imap.py i zmień:")
@@ -43,8 +40,7 @@ def download_emails(max_emails=10, output_dir='data/raw'):
         print("  Gmail: https://support.google.com/accounts/answer/185833")
         print("  Outlook: https://support.microsoft.com/en-us/account-billing/")
         return
-    
-    # Utwórz katalog
+
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
@@ -53,11 +49,9 @@ def download_emails(max_emails=10, output_dir='data/raw'):
     print(f" Zapisywanie do: {output_dir}/\n")
     
     try:
-        # Połącz z serwerem
         with IMAPClient(**IMAP_CONFIG) as client:
             print("✓ Połączono z serwerem IMAP")
-            
-            # Pobierz e-maile
+
             emails = client.fetch_all_emails(limit=max_emails)
             
             if not emails:
@@ -65,8 +59,7 @@ def download_emails(max_emails=10, output_dir='data/raw'):
                 return
             
             print(f"\n Pobrano {len(emails)} e-maili. Zapisywanie...\n")
-            
-            # Zapisz każdy e-mail
+
             for i, raw_email in enumerate(emails, 1):
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 filename = output_path / f"email_{timestamp}_{i:03d}.eml"

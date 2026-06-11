@@ -1,0 +1,32 @@
+From: "Adam Kozłowski (Comarch)" <hr@comarch.pl>
+Return-Path: <hr@comarch.pl>
+To: pracownicy@example.com
+Subject: Szkolenia z cyberbezpieczeństwa - zapisy
+Date: Thu, 14 May 2026 09:44:05 +0200
+Message-ID: <f625f37d3db8484486a451ce63465abe@comarch.pl>
+X-Mailer: Microsoft Outlook 16.0
+Received: from smtp.comarch.pl (smtp.comarch.pl [184.63.170.28]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=comarch.pl; dkim=pass header.d=comarch.pl
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Drodzy Współpracownicy,
+
+Z przyjemnością informujemy, że w przyszłym tygodniu, w dniach
+30-05-01.06.2026,
+odbędzie się cykl szkoleń z zakresu cyberbezpieczeństwa dla wszystkich
+pracowników działów IT oraz operacji.
+
+Tematyka:
+- Wykrywanie ataków phishingowych
+- Zarządzanie hasłami i 2FA
+- Bezpieczeństwo poczty elektronicznej (SPF/DKIM/DMARC)
+
+Zapisy poprzez wewnętrzny portal HR do końca tygodnia.
+
+W razie pytań - bezpośredni kontakt z działem HR.
+
+Pozdrawiam,
+Adam Kozłowski
+Dział HR | Comarch

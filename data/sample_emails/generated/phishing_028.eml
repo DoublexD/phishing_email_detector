@@ -1,0 +1,26 @@
+From: "Poczta Polska Powiadomienia" <powiadomienia@poczta.top>
+Reply-To: noreply@poczta.top
+Return-Path: <noreply@poczta.top>
+To: odbiorca@example.com
+Subject: Twoja przesyłka wymaga potwierdzenia adresu
+Date: Wed, 13 May 2026 11:50:05 +0200
+Message-ID: <3268c0e86fcf4224b2b9e99f2b175726@poczta.top>
+X-Mailer: PHPMailer 6.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Witaj,
+
+Twoja przesyłka o numerze EU417690559XX została wstrzymana w naszej sortowni
+w Szczecin z powodu niedopłaty w wysokości 1,84 zł.
+
+Aby kontynuować doręczenie, opłać brakującą kwotę online:
+http://231.25.254.215/panel/login.php
+
+Czas na opłatę: 48 godzin. Po tym okresie przesyłka zostanie zwrócona
+do nadawcy, a Ty otrzymasz powiadomienie o kosztach magazynowania.
+
+Wybierz wygodny termin doręczenia po opłaceniu.
+
+Poczta Polska

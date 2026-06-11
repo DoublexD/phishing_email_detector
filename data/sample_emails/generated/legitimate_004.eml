@@ -1,0 +1,30 @@
+From: "Booksy" <powiadomienia@booksy.com>
+Return-Path: <bounce@booksy.com>
+To: kupujacy@example.com
+Subject: Booksy: Potwierdzenie zamówienia #465341213
+Date: Fri, 08 May 2026 15:32:05 +0200
+Message-ID: <50cf5ca474634bf9a9d5a6ff4acdd2d0@booksy.com>
+X-Mailer: Mailjet
+Received: from mta.booksy.com (mta.booksy.com [36.23.97.26]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=booksy.com; dkim=pass header.d=booksy.com; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Cześć,
+
+Dziękujemy za zakup w serwisie Booksy!
+
+Szczegóły zamówienia:
+- Numer: 465341213
+- Kwota: 2296,19 zł
+- Status: Opłacone
+- Szacowana dostawa: 26.05.2026
+
+Status zamówienia możesz śledzić w zakładce „Moje zakupy" po zalogowaniu.
+
+Pamiętaj o ocenie sprzedawcy po otrzymaniu przesyłki - pomaga to budować
+zaufaną społeczność użytkowników.
+
+Pozdrawiamy,
+Zespół Booksy

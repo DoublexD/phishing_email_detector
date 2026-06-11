@@ -1,4 +1,3 @@
-/* Reset i podstawy */
 * {
     margin: 0;
     padding: 0;
@@ -22,7 +21,6 @@ body {
     overflow: hidden;
 }
 
-/* Header */
 .header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
@@ -73,7 +71,6 @@ body {
     opacity: 0.9;
 }
 
-/* Navigation */
 .nav {
     display: flex;
     background: #f5f5f5;
@@ -111,7 +108,6 @@ body {
     background: #667eea;
 }
 
-/* Main Content */
 .main-content {
     padding: 2rem;
     min-height: 500px;
@@ -131,7 +127,6 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Section Header */
 .section-header {
     display: flex;
     justify-content: space-between;
@@ -144,7 +139,6 @@ body {
     color: #333;
 }
 
-/* Buttons */
 .btn {
     padding: 0.75rem 1.5rem;
     border: none;
@@ -184,7 +178,6 @@ body {
     background: #d32f2f;
 }
 
-/* Alerts */
 .alerts-container {
     display: grid;
     gap: 1rem;
@@ -270,7 +263,6 @@ body {
     color: #666;
 }
 
-/* Analyze Form */
 .analyze-form {
     max-width: 800px;
 }
@@ -354,7 +346,6 @@ body {
     border-bottom: none;
 }
 
-/* Models */
 .models-container {
     display: grid;
     gap: 1.5rem;
@@ -420,7 +411,6 @@ body {
     color: #333;
 }
 
-/* Feature Importance */
 .features-container {
     background: #f5f5f5;
     padding: 1.5rem;
@@ -465,7 +455,6 @@ body {
     color: #667eea;
 }
 
-/* Filter Controls */
 .filter-controls {
     display: flex;
     gap: 1rem;
@@ -485,7 +474,6 @@ body {
     border-color: #667eea;
 }
 
-/* Loading */
 .loading {
     text-align: center;
     padding: 3rem;
@@ -493,7 +481,6 @@ body {
     font-size: 1.1rem;
 }
 
-/* Error */
 .error {
     background: #ffebee;
     color: #c62828;
@@ -502,7 +489,6 @@ body {
     margin: 1rem 0;
 }
 
-/* ML Metrics */
 .metric-good {
     color: #2e7d32 !important;
 }
@@ -546,7 +532,6 @@ body {
 .cm-fp { color: #c62828; background: #ffebee !important; }
 .cm-fn { color: #c62828; background: #ffebee !important; }
 
-/* Responsive */
 @media (max-width: 768px) {
     .header-content h1 {
         font-size: 1.8rem;

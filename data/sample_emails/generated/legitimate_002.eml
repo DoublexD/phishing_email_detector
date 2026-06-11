@@ -1,0 +1,29 @@
+From: "Orange Polska Faktury" <efaktura@orange.pl>
+Return-Path: <bounce@orange.pl>
+To: abonent@example.com
+Subject: Twoja faktura FV/10/542417/2026 - Orange Polska
+Date: Tue, 28 Apr 2026 10:10:05 +0200
+Message-ID: <6ce15d3c25134fb28e38ee9de1d9b126@orange.pl>
+X-Mailer: Mailgun
+Received: from mta.orange.pl (mta.orange.pl [60.183.166.181]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=orange.pl; dkim=pass header.d=orange.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Dzień dobry,
+
+Udostępniamy Twoją fakturę za usługi Orange Polska za bieżący okres rozliczeniowy.
+
+- Numer faktury: FV/10/542417/2026
+- Kwota do zapłaty: 4487,11 zł
+- Termin płatności: 06.06.2026
+- Numer konta do wpłat: PL14 1488 2535 4582 4811 9279 1434
+
+Płatność można zrealizować również przez panel klienta po zalogowaniu
+na stronę orange.pl.
+
+W przypadku pytań prosimy o kontakt z BOK pod numerem *500.
+
+Pozdrawiamy,
+Orange Polska

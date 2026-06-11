@@ -1,5 +1,4 @@
 """
-Tests for Authentication Module
 Testy dla modułu autentykacji (SPF, DKIM, DMARC)
 """
 
@@ -8,7 +7,6 @@ import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-# Dodaj src do ścieżki
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from authentication.spf_checker import SPFChecker
@@ -65,14 +63,14 @@ class TestSPFChecker:
         
         assert parsed['version'] == 'v=spf1'
         assert 'mechanisms' in parsed
-        assert parsed['all_policy'] == 'fail'  # -all
+        assert parsed['all_policy'] == 'fail'
     
     def test_spf_record_with_softfail(self, spf_checker):
         """Test rekordu SPF z softfail"""
         spf_record = "v=spf1 include:example.com ~all"
         parsed = spf_checker.parse_spf_record(spf_record)
         
-        assert parsed['all_policy'] == 'softfail'  # ~all
+        assert parsed['all_policy'] == 'softfail'
     
     @patch('spf.check2')
     def test_check_spf_pass(self, mock_spf_check, spf_checker):
@@ -181,33 +179,60 @@ class TestDMARCChecker:
 
 
 class TestAuthenticationIntegration:
-    """Testy integracyjne modułu autentykacji"""
-    
-    def test_full_authentication_check(self, spf_checker, dkim_checker, 
-                                       dmarc_checker, sample_email_data):
-        """Test pełnego przepływu autentykacji"""
-        # Te testy będą wymagały mock'owania, ponieważ używają DNS
-        # W prawdziwym środowisku testowym można użyć prawdziwych domen
-        
-        # Tutaj tylko sprawdzamy, że funkcje się nie wywrócą
-        try:
-            spf_result = spf_checker.check_from_email_data(sample_email_data)
-            assert spf_result is not None
-        except:
-            pass  # Oczekiwane jeśli brak DNS
-        
-        try:
-            raw_email = b"Test email"
-            dkim_result = dkim_checker.check_from_email_data(sample_email_data, raw_email)
-            assert dkim_result is not None
-        except:
-            pass
-        
-        try:
-            dmarc_result = dmarc_checker.check_from_email_data(sample_email_data)
-            assert dmarc_result is not None
-        except:
-            pass
+    """Testy integracyjne modułu autentykacji (warstwa sieciowa zamockowana)"""
+
+    @patch('spf.check2')
+    @patch('dkim.verify')
+    @patch.object(DMARCChecker, 'get_dmarc_record')
+    def test_full_authentication_pass(self, mock_dmarc_record, mock_dkim_verify,
+                                      mock_spf_check, spf_checker, dkim_checker,
+                                      dmarc_checker, sample_email_data):
+        """Wiarygodna wiadomość: SPF pass + DKIM pass + DMARC reject → alignment przechodzi."""
+        mock_spf_check.return_value = ('pass', 'sender authorized')
+        mock_dkim_verify.return_value = True
+        mock_dmarc_record.return_value = 'v=DMARC1; p=reject'
+        raw_email = b"From: sender@example.com\nSubject: Test\n\nBody"
+
+        spf_result = spf_checker.check_from_email_data(sample_email_data)
+        assert spf_result['result'] == 'pass'
+        assert spf_result['valid'] is True
+
+        dkim_result = dkim_checker.check_from_email_data(sample_email_data, raw_email)
+        assert dkim_result['valid'] is True
+        assert dkim_result['result'] == 'pass'
+
+        dmarc_result = dmarc_checker.check_from_email_data(sample_email_data)
+        assert dmarc_result['valid'] is True
+        assert dmarc_result['policy'] == 'reject'
+
+        alignment = dmarc_checker.check_alignment(spf_result, dkim_result, 'example.com')
+        assert alignment['dmarc_pass'] is True
+
+    @patch('spf.check2')
+    @patch.object(DMARCChecker, 'get_dmarc_record')
+    def test_full_authentication_spoofed(self, mock_dmarc_record, mock_spf_check,
+                                         spf_checker, dkim_checker, dmarc_checker):
+        """Spoofing: SPF fail + brak DKIM + DMARC reject → alignment NIE przechodzi."""
+        mock_spf_check.return_value = ('fail', 'sender not authorized')
+        mock_dmarc_record.return_value = 'v=DMARC1; p=reject'
+
+        spoofed = {
+            'from': {'email': 'ceo@example.com'},
+            'return_path': '<attacker@evil.com>',
+            'received': [{'ip': '203.0.113.7', 'date': None}],
+            'dkim_signature': None,
+        }
+        raw_email = b"From: ceo@example.com\nSubject: Pilny przelew\n\nProsze o przelew"
+
+        spf_result = spf_checker.check_from_email_data(spoofed)
+        assert spf_result['result'] == 'fail'
+        assert spf_result['valid'] is False
+
+        dkim_result = dkim_checker.check_from_email_data(spoofed, raw_email)
+        assert dkim_result['result'] == 'none'
+
+        alignment = dmarc_checker.check_alignment(spf_result, dkim_result, 'example.com')
+        assert alignment['dmarc_pass'] is False
 
 
 if __name__ == '__main__':

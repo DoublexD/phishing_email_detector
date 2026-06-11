@@ -19,8 +19,6 @@ class DKIMChecker:
         """
         Inicjalizacja sprawdzarki DKIM
         
-        Args:
-            timeout: Timeout dla zapytań DNS (sekundy)
         """
         self.timeout = timeout
     
@@ -28,11 +26,6 @@ class DKIMChecker:
         """
         Sprawdza podpis DKIM wiadomości
         
-        Args:
-            raw_email: Surowa wiadomość e-mail (bytes)
-            
-        Returns:
-            Wyniki weryfikacji DKIM
         """
         result = {
             'valid': False,
@@ -42,13 +35,11 @@ class DKIMChecker:
         }
         
         try:
-            # Weryfikuj podpis DKIM
             verified = dkim.verify(raw_email)
             
             result['valid'] = verified
             result['result'] = 'pass' if verified else 'fail'
-            
-            # Ekstrahuj informacje o podpisie
+
             signatures = self._extract_dkim_signatures(raw_email)
             result['signatures'] = signatures
             
@@ -69,19 +60,12 @@ class DKIMChecker:
         """
         Ekstrahuje informacje o podpisach DKIM z wiadomości
         
-        Args:
-            raw_email: Surowa wiadomość
-            
-        Returns:
-            Lista podpisów DKIM
         """
         signatures = []
         
         try:
-            # Parsuj e-mail
             msg = email.message_from_bytes(raw_email)
-            
-            # Szukaj nagłówków DKIM-Signature
+
             for header in msg.get_all('DKIM-Signature', []):
                 signature_info = self._parse_dkim_signature(header)
                 if signature_info:
@@ -96,20 +80,13 @@ class DKIMChecker:
         """
         Parsuje nagłówek DKIM-Signature
         
-        Args:
-            signature_header: Zawartość nagłówka DKIM-Signature
-            
-        Returns:
-            Sparsowane informacje o podpisie
         """
         try:
             signature_info = {}
-            
-            # Usuń znaki nowej linii i nadmiarowe spacje
+
             header = signature_header.replace('\n', '').replace('\r', '')
             header = ' '.join(header.split())
-            
-            # Parsuj pary klucz=wartość
+
             parts = header.split(';')
             for part in parts:
                 part = part.strip()
@@ -127,12 +104,6 @@ class DKIMChecker:
         """
         Pobiera klucz publiczny DKIM z DNS
         
-        Args:
-            selector: Selektor DKIM
-            domain: Domena
-            
-        Returns:
-            Klucz publiczny lub None
         """
         try:
             dkim_domain = f"{selector}._domainkey.{domain}"
@@ -140,7 +111,7 @@ class DKIMChecker:
             
             for rdata in answers:
                 txt_string = b''.join(rdata.strings).decode('utf-8')
-                if 'p=' in txt_string:  # Zawiera klucz publiczny
+                if 'p=' in txt_string:
                     return txt_string
             
             return None
@@ -156,14 +127,7 @@ class DKIMChecker:
         """
         Sprawdza DKIM na podstawie wyparsowanych danych i surowej wiadomości
         
-        Args:
-            email_data: Wyparsowane dane e-maila
-            raw_email: Surowa wiadomość (bytes)
-            
-        Returns:
-            Wyniki sprawdzenia DKIM
         """
-        # Sprawdź czy jest nagłówek DKIM-Signature
         dkim_signature = email_data.get('dkim_signature')
         
         if not dkim_signature:
@@ -174,7 +138,6 @@ class DKIMChecker:
                 'signatures': [],
                 'errors': ['Brak podpisu DKIM']
             }
-        
-        # Weryfikuj podpis
+
         return self.check_dkim(raw_email)
 

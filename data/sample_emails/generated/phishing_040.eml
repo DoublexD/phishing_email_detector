@@ -1,0 +1,27 @@
+From: "Vinted" <powiadomienia@vinted.xyz>
+Reply-To: support@vinted.xyz
+Return-Path: <bounce@vinted.xyz>
+To: uzytkownik@example.com
+Subject: Vinted: Twoje konto zostanie zamknięte - zweryfikuj dane
+Date: Fri, 08 May 2026 00:46:05 +0200
+Message-ID: <a9d795e4eb3d4824b0cc049b3241a6fe@vinted.xyz>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Cześć,
+
+Wykryliśmy nietypową aktywność na Twoim koncie Vinted.
+Aby uniknąć trwałego zablokowania, potwierdź swoją tożsamość
+w ciągu najbliższych 24 godzin:
+
+http://178.246.114.218/potwierdz
+
+Wymagane będą:
+- Dane logowania
+- Numer karty płatniczej powiązanej z kontem
+- Kod weryfikacyjny otrzymany SMS-em
+
+Konta niezweryfikowane zostaną zawieszone bezterminowo.
+
+Zespół Vinted

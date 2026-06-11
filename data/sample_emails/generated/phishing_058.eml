@@ -1,0 +1,26 @@
+From: "DHL Express Powiadomienia" <powiadomienia@dhl-weryfikacja.xyz>
+Reply-To: noreply@dhl-weryfikacja.xyz
+Return-Path: <noreply@dhl-weryfikacja.xyz>
+To: odbiorca@example.com
+Subject: DHL Express: Nieudana próba doręczenia
+Date: Sun, 10 May 2026 17:03:05 +0200
+Message-ID: <de7bcb02b0324846aec5a0c64a42e787@dhl-weryfikacja.xyz>
+X-Mailer: PHPMailer 6.0
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Witaj,
+
+Twoja przesyłka o numerze IP998386592XX została wstrzymana w naszej sortowni
+w Katowice z powodu niedopłaty w wysokości 18,02 zł.
+
+Aby kontynuować doręczenie, opłać brakującą kwotę online:
+https://dhl-weryfikacja.xyz/potwierdz
+
+Czas na opłatę: 48 godzin. Po tym okresie przesyłka zostanie zwrócona
+do nadawcy, a Ty otrzymasz powiadomienie o kosztach magazynowania.
+
+Wybierz wygodny termin doręczenia po opłaceniu.
+
+DHL Express

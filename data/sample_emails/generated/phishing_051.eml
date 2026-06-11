@@ -1,0 +1,26 @@
+From: "Millennium Bank - Bezpieczeństwo" <obsluga@millennium.link>
+Reply-To: noreply@contact2024.click
+Return-Path: <bounce@millennium.link>
+To: klient@example.com
+Subject: Weryfikacja danych - konto wygasa w ciągu 24h
+Date: Fri, 24 Apr 2026 16:20:05 +0200
+Message-ID: <cde6959becf14b2e992d0e9ca9e993bb@millennium.link>
+X-Mailer: Python/3.10
+Received: from unknown (218.32.171.181) by mail.example.com
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+POTWIERDŹ TRANSAKCJĘ
+
+Wykryto autoryzację płatności:
+- Kwota: 2720,12 zł
+- Odbiorca: SHOP-PAYMENTS LTD
+- Data: 2026-05-23 23:11
+
+Jeżeli NIE autoryzowałeś tej transakcji, anuluj ją natychmiast:
+>>> https://millennium.link/panel/login.php <<<
+
+Po 30 minutach środki zostaną pobrane bezpowrotnie.
+
+Dział Bezpieczeństwa Millennium Bank

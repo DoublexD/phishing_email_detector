@@ -9,11 +9,9 @@ import random
 
 class EmailAnalysisUser(HttpUser):
     """Użytkownik testujący API analizy e-maili"""
-    
-    # Czas oczekiwania między requestami (1-3 sekundy)
+
     wait_time = between(1, 3)
-    
-    # Przykładowe e-maile do testowania
+
     sample_emails = [
         """From: legitimate@company.com
 To: user@example.com
@@ -42,7 +40,6 @@ Welcome to our monthly newsletter with the latest updates.
     
     def on_start(self):
         """Wykonywane przy starcie użytkownika"""
-        # Sprawdź health check
         self.client.get("/health")
     
     @task(5)
@@ -158,9 +155,9 @@ class AdminUser(HttpUser):
 
 class StressTestUser(HttpUser):
     """Użytkownik do testów obciążeniowych - wysyła wiele requestów"""
-    
-    wait_time = between(0.1, 0.5)  # Bardzo krótkie oczekiwanie
-    
+
+    wait_time = between(0.1, 0.5)
+
     sample_email = """From: test@example.com
 To: user@example.com
 Subject: Stress Test
@@ -174,13 +171,12 @@ This is a stress test email.
         """Szybka analiza e-maili"""
         payload = {
             "email_string": self.sample_email,
-            "analyze_authentication": False  # Wyłącz dla szybszej analizy
+            "analyze_authentication": False
         }
         
         self.client.post("/api/analyze", json=payload)
 
 
-# Konfiguracja testów
 """
 Uruchomienie testów:
 

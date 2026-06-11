@@ -1,0 +1,25 @@
+From: "Millennium Bank - Bezpieczeństwo" <obsluga@millennium.info>
+Reply-To: noreply@contact.buzz
+Return-Path: <bounce@millennium.info>
+To: klient@example.com
+Subject: Próba nieautoryzowanego logowania - Millennium Bank
+Date: Mon, 11 May 2026 12:32:05 +0200
+Message-ID: <ad00a481b6fc457eafd687e0d9380708@millennium.info>
+X-Mailer: Python/3.10
+Received: from unknown (223.123.250.122) by mail.example.com
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Szanowny Kliencie,
+
+Wykryliśmy próbę logowania do Twojego konta z nietypowej lokalizacji:
+Kraków, IP: 17.249.161.157.
+
+Jeżeli to nie Ty, natychmiast zweryfikuj swoje dane logowania:
+https://millennium.info/secure
+
+Brak reakcji w ciągu 24 godzin spowoduje czasowe zablokowanie konta.
+
+Millennium Bank
+Centrum Bezpieczeństwa

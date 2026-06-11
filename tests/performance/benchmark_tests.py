@@ -10,7 +10,6 @@ import time
 import numpy as np
 import pandas as pd
 
-# Dodaj src do ścieżki
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
 
 from email_parser.parser import EmailParser
@@ -177,8 +176,7 @@ class TestMemoryUsage:
         import tracemalloc
         
         tracemalloc.start()
-        
-        # Parsuj 1000 e-maili
+
         large_batch = sample_emails * 10
         results = [email_parser.parse_email_string(email) for email in large_batch]
         
@@ -189,7 +187,6 @@ class TestMemoryUsage:
               f"Peak={peak / 1024 / 1024:.2f} MB")
         
         assert len(results) == len(large_batch)
-        # Sprawdź że zużycie pamięci jest rozsądne (< 500 MB)
         assert peak < 500 * 1024 * 1024
 
 
@@ -215,16 +212,13 @@ class TestScalability:
             
             print(f"\nBatch size: {size}, Time: {elapsed:.2f}s, "
                   f"Throughput: {throughput:.2f} emails/s")
-        
-        # Sprawdź że czas rośnie mniej więcej liniowo
-        # (jeśli doubled size, time should be roughly doubled)
+
         assert len(times) == len(batch_sizes)
 
 
 class TestPerformanceRegression:
     """Testy regresji wydajności"""
-    
-    # Oczekiwane czasy (w sekundach)
+
     EXPECTED_TIMES = {
         'parse_single': 0.01,
         'analyze_headers': 0.005,
@@ -259,7 +253,6 @@ class TestPerformanceRegression:
         assert elapsed < self.EXPECTED_TIMES['full_pipeline']
 
 
-# Konfiguracja pytest-benchmark
 """
 Uruchomienie testów:
 

@@ -1,0 +1,25 @@
+From: "ING Bank Śląski - Bezpieczeństwo" <obsluga@ing-bezpieczenstwo.link>
+Reply-To: noreply@contact-bezpieczenstwo.icu
+Return-Path: <bounce@ing-bezpieczenstwo.link>
+To: klient@example.com
+Subject: Weryfikacja danych - konto wygasa w ciągu 24h
+Date: Tue, 05 May 2026 16:31:05 +0200
+Message-ID: <7f1b1781787c4a9cb3120241f45dd09f@ing-bezpieczenstwo.link>
+X-Mailer: Python/3.10
+Received: from unknown (185.27.125.184) by mail.example.com
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Drogi Kliencie Małgorzata Kowalczyk,
+
+Z dniem dzisiejszym Twoje konto bankowe zostało tymczasowo zawieszone
+z powodu zaległej weryfikacji danych. Aby przywrócić dostęp do bankowości
+elektronicznej, kliknij w poniższy link i potwierdź swoją tożsamość:
+
+https://ing-bezpieczenstwo.link/verify
+
+UWAGA: Niezweryfikowanie konta w ciągu 12 godzin spowoduje jego trwałe
+zablokowanie i przekazanie sprawy do windykacji.
+
+Zespół ING Bank Śląski

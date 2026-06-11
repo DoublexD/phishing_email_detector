@@ -1,0 +1,27 @@
+From: "DHL Express" <powiadomienia@dhl.com>
+Return-Path: <noreply@dhl.com>
+To: odbiorca@example.com
+Subject: Paczka IP497478786XX czeka w paczkomacie
+Date: Mon, 11 May 2026 19:35:05 +0200
+Message-ID: <ab40ece7de0b44dfb2649ffd69bee655@dhl.com>
+X-Mailer: SendGrid
+Received: from o1.email.dhl.com ([189.239.174.167]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=dhl.com; dkim=pass header.d=dhl.com; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Witaj,
+
+Twoja paczka jest gotowa do odbioru.
+
+- Numer paczki: IP497478786XX
+- Lokalizacja: Paczkomat WAW27M, Katowice
+- Kod odbioru zostanie wysłany SMS-em
+- Czas na odbiór: 48 godzin
+
+Adres do nawigacji oraz status przesyłki dostępne są w aplikacji
+DHL Express (sklepy Google Play i App Store).
+
+Dziękujemy za wybór naszych usług.
+DHL Express

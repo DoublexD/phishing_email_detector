@@ -1,0 +1,29 @@
+From: "Netia Faktury" <efaktura@netia.pl>
+Return-Path: <bounce@netia.pl>
+To: abonent@example.com
+Subject: Twoja faktura FV/04/838797/2026 - Netia
+Date: Wed, 06 May 2026 16:00:05 +0200
+Message-ID: <1c41054d8f9b42d6bac95ceeffcec499@netia.pl>
+X-Mailer: Mailgun
+Received: from mta.netia.pl (mta.netia.pl [81.116.162.215]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=netia.pl; dkim=pass header.d=netia.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Dzień dobry,
+
+Udostępniamy Twoją fakturę za usługi Netia za bieżący okres rozliczeniowy.
+
+- Numer faktury: FV/04/838797/2026
+- Kwota do zapłaty: 2982,73 zł
+- Termin płatności: 06.06.2026
+- Numer konta do wpłat: PL18 1750 4733 5741 2307 4814 2654
+
+Płatność można zrealizować również przez panel klienta po zalogowaniu
+na stronę netia.pl.
+
+W przypadku pytań prosimy o kontakt z BOK pod numerem *500.
+
+Pozdrawiamy,
+Netia

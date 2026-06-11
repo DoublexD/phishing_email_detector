@@ -1,0 +1,30 @@
+From: "Allegro" <powiadomienia@allegro.pl>
+Return-Path: <bounce@allegro.pl>
+To: kupujacy@example.com
+Subject: Allegro: Potwierdzenie zamówienia #754049436
+Date: Tue, 12 May 2026 19:48:05 +0200
+Message-ID: <1dce22e6240f44b78798c5197429f9d6@allegro.pl>
+X-Mailer: Mailjet
+Received: from mta.allegro.pl (mta.allegro.pl [51.118.97.71]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=allegro.pl; dkim=pass header.d=allegro.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Cześć,
+
+Dziękujemy za zakup w serwisie Allegro!
+
+Szczegóły zamówienia:
+- Numer: 754049436
+- Kwota: 1421,68 zł
+- Status: Opłacone
+- Szacowana dostawa: 30.05.2026
+
+Status zamówienia możesz śledzić w zakładce „Moje zakupy" po zalogowaniu.
+
+Pamiętaj o ocenie sprzedawcy po otrzymaniu przesyłki - pomaga to budować
+zaufaną społeczność użytkowników.
+
+Pozdrawiamy,
+Zespół Allegro

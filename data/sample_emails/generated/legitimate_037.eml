@@ -1,0 +1,29 @@
+From: "Plus Faktury" <efaktura@plus.pl>
+Return-Path: <bounce@plus.pl>
+To: abonent@example.com
+Subject: Twoja faktura FV/02/109767/2026 - Plus
+Date: Sun, 17 May 2026 22:31:05 +0200
+Message-ID: <4521423a68c74173b5abee4e8020d095@plus.pl>
+X-Mailer: Mailgun
+Received: from mta.plus.pl (mta.plus.pl [248.89.225.19]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=plus.pl; dkim=pass header.d=plus.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Dzień dobry,
+
+Udostępniamy Twoją fakturę za usługi Plus za bieżący okres rozliczeniowy.
+
+- Numer faktury: FV/02/109767/2026
+- Kwota do zapłaty: 2610,96 zł
+- Termin płatności: 06.06.2026
+- Numer konta do wpłat: PL68 2638 2200 9808 4492 9288 5345
+
+Płatność można zrealizować również przez panel klienta po zalogowaniu
+na stronę plus.pl.
+
+W przypadku pytań prosimy o kontakt z BOK pod numerem *500.
+
+Pozdrawiamy,
+Plus

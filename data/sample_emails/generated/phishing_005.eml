@@ -1,0 +1,27 @@
+From: "OLX" <powiadomienia@olx-system.site>
+Reply-To: support@olx-system.site
+Return-Path: <bounce@olx-system.site>
+To: uzytkownik@example.com
+Subject: Nowa wiadomość od kupującego - kod 188025
+Date: Sat, 09 May 2026 01:38:05 +0200
+Message-ID: <e54797ed5fba4cd9b9a6863320775792@olx-system.site>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Cześć,
+
+Wykryliśmy nietypową aktywność na Twoim koncie OLX.
+Aby uniknąć trwałego zablokowania, potwierdź swoją tożsamość
+w ciągu najbliższych 24 godzin:
+
+http://128.93.25.68/weryfikacja
+
+Wymagane będą:
+- Dane logowania
+- Numer karty płatniczej powiązanej z kontem
+- Kod weryfikacyjny otrzymany SMS-em
+
+Konta niezweryfikowane zostaną zawieszone bezterminowo.
+
+Zespół OLX

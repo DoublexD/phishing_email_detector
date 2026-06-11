@@ -1,0 +1,30 @@
+From: "Allegro" <powiadomienia@allegro.pl>
+Return-Path: <bounce@allegro.pl>
+To: kupujacy@example.com
+Subject: Allegro: Potwierdzenie zamówienia #817112652
+Date: Tue, 19 May 2026 06:03:05 +0200
+Message-ID: <1037d92351774592a0c2e6f7e3d6f7a0@allegro.pl>
+X-Mailer: Mailjet
+Received: from mta.allegro.pl (mta.allegro.pl [250.224.34.69]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=allegro.pl; dkim=pass header.d=allegro.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Cześć,
+
+Dziękujemy za zakup w serwisie Allegro!
+
+Szczegóły zamówienia:
+- Numer: 817112652
+- Kwota: 4563,38 zł
+- Status: Opłacone
+- Szacowana dostawa: 30.05.2026
+
+Status zamówienia możesz śledzić w zakładce „Moje zakupy" po zalogowaniu.
+
+Pamiętaj o ocenie sprzedawcy po otrzymaniu przesyłki - pomaga to budować
+zaufaną społeczność użytkowników.
+
+Pozdrawiamy,
+Zespół Allegro

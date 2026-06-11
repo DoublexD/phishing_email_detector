@@ -1,0 +1,27 @@
+From: "UPS Polska" <powiadomienia@ups.com>
+Return-Path: <noreply@ups.com>
+To: odbiorca@example.com
+Subject: Paczka PL488690725PL czeka w paczkomacie
+Date: Fri, 01 May 2026 12:08:05 +0200
+Message-ID: <c3d31908469b4697a26d9c391e5f44da@ups.com>
+X-Mailer: SendGrid
+Received: from o1.email.ups.com ([33.193.12.222]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=ups.com; dkim=pass header.d=ups.com; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Witaj,
+
+Twoja paczka jest gotowa do odbioru.
+
+- Numer paczki: PL488690725PL
+- Lokalizacja: Paczkomat WAW18M, Lublin
+- Kod odbioru zostanie wysłany SMS-em
+- Czas na odbiór: 48 godzin
+
+Adres do nawigacji oraz status przesyłki dostępne są w aplikacji
+UPS Polska (sklepy Google Play i App Store).
+
+Dziękujemy za wybór naszych usług.
+UPS Polska

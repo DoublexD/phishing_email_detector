@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 
 class SPFChecker:
     """Klasa do sprawdzania rekordów SPF"""
-    
-    # Możliwe wyniki SPF
+
     RESULTS = {
         'pass': 'Weryfikacja SPF pomyślna',
         'fail': 'Weryfikacja SPF nieudana',
@@ -30,8 +29,6 @@ class SPFChecker:
         """
         Inicjalizacja sprawdzarki SPF
         
-        Args:
-            timeout: Timeout dla zapytań DNS (sekundy)
         """
         self.timeout = timeout
     
@@ -42,13 +39,6 @@ class SPFChecker:
         """
         Sprawdza rekord SPF dla danej wiadomości
         
-        Args:
-            sender_ip: Adres IP nadawcy
-            sender_email: Adres e-mail nadawcy
-            helo_domain: Domena z komendy HELO/EHLO
-            
-        Returns:
-            Słownik z wynikami sprawdzenia
         """
         result = {
             'result': 'none',
@@ -59,13 +49,11 @@ class SPFChecker:
         }
         
         try:
-            # Wyciągnij domenę z adresu e-mail
             if '@' in sender_email:
                 domain = sender_email.split('@')[1]
             else:
                 domain = sender_email
-            
-            # Sprawdź SPF
+
             spf_result, explanation = spf.check2(
                 i=sender_ip,
                 s=sender_email,
@@ -76,8 +64,7 @@ class SPFChecker:
             result['explanation'] = explanation
             result['valid'] = spf_result == 'pass'
             result['raw_result'] = spf_result
-            
-            # Generuj nagłówek Received-SPF
+
             result['header'] = self._generate_spf_header(
                 spf_result, sender_ip, sender_email, explanation
             )
@@ -95,11 +82,6 @@ class SPFChecker:
         """
         Pobiera rekord SPF dla domeny
         
-        Args:
-            domain: Domena do sprawdzenia
-            
-        Returns:
-            Rekord SPF lub None
         """
         try:
             answers = dns.resolver.resolve(domain, 'TXT', lifetime=self.timeout)
@@ -125,11 +107,6 @@ class SPFChecker:
         """
         Parsuje rekord SPF
         
-        Args:
-            spf_record: Rekord SPF do sparsowania
-            
-        Returns:
-            Sparsowane komponenty rekordu
         """
         parsed = {
             'version': '',
@@ -142,23 +119,18 @@ class SPFChecker:
             return parsed
         
         parts = spf_record.split()
-        
-        # Wersja
+
         if parts and parts[0].startswith('v=spf'):
             parsed['version'] = parts[0]
             parts = parts[1:]
-        
-        # Mechanizmy i modyfikatory
+
         for part in parts:
             if '=' in part and not part.startswith(('+', '-', '~', '?')):
-                # Modyfikator
                 key, value = part.split('=', 1)
                 parsed['modifiers'][key] = value
             else:
-                # Mechanizm
                 parsed['mechanisms'].append(part)
-                
-                # Sprawdź politykę "all"
+
                 if part in ['all', '+all', '-all', '~all', '?all']:
                     if part.startswith('-'):
                         parsed['all_policy'] = 'fail'
@@ -185,20 +157,22 @@ class SPFChecker:
     def check_from_email_data(self, email_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Sprawdza SPF na podstawie wyparsowanych danych e-maila
-        
-        Args:
-            email_data: Wyparsowane dane e-maila
-            
-        Returns:
-            Wyniki sprawdzenia SPF
+
+        SPF weryfikuje adres koperty (MAIL FROM / Return-Path), a nie pola
+        ``From`` widocznego dla użytkownika. Adres IP brany jest z pierwszego
+        (najnowszego) nagłówka ``Received``, który zawiera publiczny adres IP,
+        czyli z serwera, który nawiązał połączenie z MTA odbiorcy.
         """
-        # Pobierz IP nadawcy z pierwszego nagłówka Received
         received = email_data.get('received', [])
         sender_ip = None
-        
-        if received:
-            sender_ip = received[-1].get('ip')  # Pierwszy serwer w łańcuchu
-        
+
+        for entry in received:
+            if entry.get('ip'):
+                sender_ip = entry['ip']
+                break
+        if not sender_ip and received:
+            sender_ip = received[-1].get('ip')
+
         if not sender_ip:
             logger.warning("Nie znaleziono IP nadawcy w nagłówkach")
             return {
@@ -206,9 +180,8 @@ class SPFChecker:
                 'explanation': 'Brak informacji o IP nadawcy',
                 'valid': False
             }
-        
-        # Pobierz adres nadawcy
-        sender_email = email_data.get('from', {}).get('email', '')
+
+        sender_email = self._get_envelope_sender(email_data)
         if not sender_email:
             logger.warning("Brak adresu nadawcy")
             return {
@@ -216,6 +189,19 @@ class SPFChecker:
                 'explanation': 'Brak adresu nadawcy',
                 'valid': False
             }
-        
+
         return self.check_spf(sender_ip, sender_email)
+
+    def _get_envelope_sender(self, email_data: Dict[str, Any]) -> str:
+        """
+        Zwraca adres koperty (Return-Path) używany do weryfikacji SPF.
+
+        Gdy Return-Path jest niedostępny, jako rozwiązanie awaryjne używane jest
+        pole From.
+        """
+        return_path = email_data.get('return_path', '') or ''
+        match = re.search(r'<?\s*([^<>@\s]+@[\w.\-]+)\s*>?', return_path)
+        if match:
+            return match.group(1).lower()
+        return email_data.get('from', {}).get('email', '')
 

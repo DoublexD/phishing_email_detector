@@ -1,0 +1,29 @@
+From: "Play Faktury" <efaktura@play.pl>
+Return-Path: <bounce@play.pl>
+To: abonent@example.com
+Subject: Twoja faktura FV/12/823378/2026 - Play
+Date: Mon, 18 May 2026 11:01:05 +0200
+Message-ID: <b14e3942da134fc3848ce2c703d04e2f@play.pl>
+X-Mailer: Mailgun
+Received: from mta.play.pl (mta.play.pl [73.57.16.88]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=play.pl; dkim=pass header.d=play.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Dzień dobry,
+
+Udostępniamy Twoją fakturę za usługi Play za bieżący okres rozliczeniowy.
+
+- Numer faktury: FV/12/823378/2026
+- Kwota do zapłaty: 4437,96 zł
+- Termin płatności: 06.06.2026
+- Numer konta do wpłat: PL35 6107 7537 7118 8177 9479 8397
+
+Płatność można zrealizować również przez panel klienta po zalogowaniu
+na stronę play.pl.
+
+W przypadku pytań prosimy o kontakt z BOK pod numerem *500.
+
+Pozdrawiamy,
+Play

@@ -1,0 +1,27 @@
+From: "UPS Polska" <powiadomienia@ups.com>
+Return-Path: <noreply@ups.com>
+To: odbiorca@example.com
+Subject: Paczka EU559225330PL czeka w paczkomacie
+Date: Sun, 17 May 2026 04:23:05 +0200
+Message-ID: <ad27fca2bfc04c8ca12a9891245b9137@ups.com>
+X-Mailer: SendGrid
+Received: from o1.email.ups.com ([149.9.213.96]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=ups.com; dkim=pass header.d=ups.com; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Witaj,
+
+Twoja paczka jest gotowa do odbioru.
+
+- Numer paczki: EU559225330PL
+- Lokalizacja: Paczkomat WAW15M, Kraków
+- Kod odbioru zostanie wysłany SMS-em
+- Czas na odbiór: 48 godzin
+
+Adres do nawigacji oraz status przesyłki dostępne są w aplikacji
+UPS Polska (sklepy Google Play i App Store).
+
+Dziękujemy za wybór naszych usług.
+UPS Polska

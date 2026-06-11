@@ -7,7 +7,6 @@ import pytest
 import sys
 from pathlib import Path
 
-# Dodaj src do ścieżki
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from email_parser.parser import EmailParser
@@ -155,27 +154,25 @@ class TestEmailParserIntegration:
     
     def test_full_parsing_workflow(self, email_parser, header_analyzer, sample_email_with_received):
         """Test pełnego workflow parsowania i analizy"""
-        # Parsuj e-mail
         email_data = email_parser.parse_email_string(sample_email_with_received)
-        
-        # Analizuj nagłówki
+
         header_analysis = header_analyzer.analyze(email_data)
-        
-        # Sprawdź wyniki
+
         assert email_data is not None
         assert header_analysis is not None
         assert 'anomaly_score' in header_analysis
         
     def test_malformed_email_handling(self, email_parser):
-        """Test obsługi nieprawidłowych e-maili"""
+        """Nieprawidłowy e-mail nie crashuje — parser zwraca spójną strukturę danych"""
         malformed = "This is not a valid email format"
-        
-        # Powinno się sparsować, ale z błędami
-        try:
-            result = email_parser.parse_email_string(malformed)
-            assert result is not None
-        except:
-            pass  # Oczekiwane dla bardzo nieprawidłowych danych
+
+        result = email_parser.parse_email_string(malformed)
+
+        assert isinstance(result, dict)
+        assert 'from' in result
+        assert isinstance(result['body'], dict)
+        assert 'received' in result
+        assert not result['from'].get('email')
 
 
 if __name__ == '__main__':

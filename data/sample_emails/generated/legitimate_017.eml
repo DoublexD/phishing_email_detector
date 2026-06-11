@@ -1,0 +1,29 @@
+From: "Play Faktury" <efaktura@play.pl>
+Return-Path: <bounce@play.pl>
+To: abonent@example.com
+Subject: Twoja faktura FV/12/854639/2026 - Play
+Date: Sun, 26 Apr 2026 06:02:05 +0200
+Message-ID: <e797956ffb7b45589dafb1a5b475f600@play.pl>
+X-Mailer: Mailgun
+Received: from mta.play.pl (mta.play.pl [60.39.95.197]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=play.pl; dkim=pass header.d=play.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Dzień dobry,
+
+Udostępniamy Twoją fakturę za usługi Play za bieżący okres rozliczeniowy.
+
+- Numer faktury: FV/12/854639/2026
+- Kwota do zapłaty: 3736,00 zł
+- Termin płatności: 06.06.2026
+- Numer konta do wpłat: PL43 9201 3927 9317 2743 5889 9317
+
+Płatność można zrealizować również przez panel klienta po zalogowaniu
+na stronę play.pl.
+
+W przypadku pytań prosimy o kontakt z BOK pod numerem *500.
+
+Pozdrawiamy,
+Play

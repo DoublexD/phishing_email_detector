@@ -1,0 +1,29 @@
+From: "T-Mobile Polska Faktury" <efaktura@t-mobile.pl>
+Return-Path: <bounce@t-mobile.pl>
+To: abonent@example.com
+Subject: Twoja faktura FV/10/736130/2026 - T-Mobile Polska
+Date: Sat, 02 May 2026 10:21:05 +0200
+Message-ID: <5e8f60b1ff0a4278ad3d1b2c28a83f96@t-mobile.pl>
+X-Mailer: Mailgun
+Received: from mta.t-mobile.pl (mta.t-mobile.pl [213.230.245.205]) by mail.example.com
+Authentication-Results: mail.example.com; spf=pass smtp.mailfrom=t-mobile.pl; dkim=pass header.d=t-mobile.pl; dmarc=pass
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Dzień dobry,
+
+Udostępniamy Twoją fakturę za usługi T-Mobile Polska za bieżący okres rozliczeniowy.
+
+- Numer faktury: FV/10/736130/2026
+- Kwota do zapłaty: 1741,55 zł
+- Termin płatności: 06.06.2026
+- Numer konta do wpłat: PL93 6279 8618 8238 8244 4501 9375
+
+Płatność można zrealizować również przez panel klienta po zalogowaniu
+na stronę t-mobile.pl.
+
+W przypadku pytań prosimy o kontakt z BOK pod numerem *500.
+
+Pozdrawiamy,
+T-Mobile Polska

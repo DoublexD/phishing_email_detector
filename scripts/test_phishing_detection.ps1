@@ -138,11 +138,5 @@ if ($passed -eq $total) {
     Write-Host "  - Anomaliach czasowych" -ForegroundColor Gray
     Write-Host "  - Podejrzanych wzorcach" -ForegroundColor Gray
 }
-
-Write-Host "`nAby zwiększyć dokładność:" -ForegroundColor Yellow
-Write-Host "  1. Wytrenuj modele ML (.\scripts\train_models.ps1)" -ForegroundColor White
-Write-Host "  2. Zbierz więcej danych treningowych" -ForegroundColor White
-Write-Host "  3. Dostosuj thresholdy w config\config.yaml" -ForegroundColor White
-
 Write-Host "`n========================================`n" -ForegroundColor Cyan
 

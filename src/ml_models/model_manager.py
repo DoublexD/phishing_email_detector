@@ -79,8 +79,7 @@ class ModelManager:
             'metrics': metrics,
             'status': 'active'
         }
-        
-        # Ustaw jako aktualną wersję
+
         self.metadata[model_name]['current_version'] = version
         
         self._save_metadata()
@@ -179,8 +178,7 @@ class ModelManager:
             },
             'differences': {}
         }
-        
-        # Oblicz różnice w metrykach
+
         common_metrics = set(v1_metrics.keys()) & set(v2_metrics.keys())
         for metric in common_metrics:
             if isinstance(v1_metrics[metric], (int, float)) and isinstance(v2_metrics[metric], (int, float)):
@@ -202,12 +200,10 @@ class ModelManager:
         """
         if model_name in self.metadata:
             if version in self.metadata[model_name]['versions']:
-                # Oznacz jako nieaktywną zamiast usuwać
                 self.metadata[model_name]['versions'][version]['status'] = 'deleted'
                 self._save_metadata()
                 logger.info(f"Usunięto wersję {version} modelu {model_name}")
-                
-                # Jeśli to była aktualna wersja, ustaw na None
+
                 if self.metadata[model_name]['current_version'] == version:
                     self.metadata[model_name]['current_version'] = None
                     logger.warning(f"Usunięto aktualną wersję modelu {model_name}")

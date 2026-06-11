@@ -1,14 +1,20 @@
-// Email Spoofing Detector - Frontend JavaScript
-
 const API_BASE_URL = 'http://localhost:8000';
 
-// Initialize
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initializeTabs();
     loadInitialData();
 });
 
-// Tab Navigation
 function initializeTabs() {
     const navButtons = document.querySelectorAll('.nav-button');
     
@@ -21,19 +27,16 @@ function initializeTabs() {
 }
 
 function switchTab(tabName) {
-    // Update nav buttons
     document.querySelectorAll('.nav-button').forEach(btn => {
         btn.classList.remove('active');
     });
     document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-    
-    // Update tab content
+
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
     document.getElementById(`${tabName}-tab`).classList.add('active');
-    
-    // Load tab-specific data
+
     loadTabData(tabName);
 }
 
@@ -51,13 +54,11 @@ function loadTabData(tabName) {
     }
 }
 
-// Load Initial Data
 async function loadInitialData() {
     await updateHeaderStats();
     await refreshAlerts();
 }
 
-// Update Header Statistics
 async function updateHeaderStats() {
     try {
         const response = await fetch(`${API_BASE_URL}/api/stats`);
@@ -73,7 +74,6 @@ async function updateHeaderStats() {
     }
 }
 
-// Alerts Tab
 async function refreshAlerts() {
     const container = document.getElementById('alerts-container');
     const riskFilter = document.getElementById('risk-filter').value;
@@ -107,8 +107,8 @@ function createAlertCard(alert) {
     const card = document.createElement('div');
     card.className = `alert-card ${alert.risk_level}`;
     
-    const fromEmail = alert.from?.email || 'Nieznany';
-    const subject = alert.subject || 'Brak tematu';
+    const fromEmail = escapeHtml(alert.from?.email || 'Nieznany');
+    const subject = escapeHtml(alert.subject || 'Brak tematu');
     const timestamp = new Date(alert.timestamp).toLocaleString('pl-PL');
     
     card.innerHTML = `
@@ -119,22 +119,21 @@ function createAlertCard(alert) {
                 <div class="alert-info">Czas: ${timestamp}</div>
                 <div class="alert-info">Pewność: ${(alert.confidence * 100).toFixed(1)}%</div>
             </div>
-            <span class="alert-badge ${alert.risk_level}">${alert.risk_level}</span>
+            <span class="alert-badge ${escapeHtml(alert.risk_level)}">${escapeHtml(alert.risk_level)}</span>
         </div>
         <div class="alert-indicators">
-            ${alert.spoofing_indicators.map(ind => 
-                `<span class="indicator-tag">${ind}</span>`
+            ${(alert.spoofing_indicators || []).map(ind => 
+                `<span class="indicator-tag">${escapeHtml(ind)}</span>`
             ).join('')}
         </div>
         <div style="margin-top: 1rem;">
-            <strong>Rekomendacja:</strong> ${alert.recommendation}
+            <strong>Rekomendacja:</strong> ${escapeHtml(alert.recommendation)}
         </div>
     `;
     
     return card;
 }
 
-// Analyze Tab
 async function analyzeEmail() {
     const emailInput = document.getElementById('email-input').value;
     const analyzeAuth = document.getElementById('analyze-auth').checked;
@@ -166,8 +165,7 @@ async function analyzeEmail() {
         
         const result = await response.json();
         displayAnalysisResult(result);
-        
-        // Refresh stats and alerts
+
         await updateHeaderStats();
         if (result.is_suspicious) {
             await refreshAlerts();
@@ -202,7 +200,7 @@ function displayAnalysisResult(result) {
                 <h3>Wykryte wskaźniki spoofingu</h3>
                 <ul class="result-list">
                     ${result.spoofing_indicators.map(ind => 
-                        `<li>⚠️ ${ind}</li>`
+                        `<li>⚠️ ${escapeHtml(ind)}</li>`
                     ).join('')}
                 </ul>
             </div>
@@ -238,17 +236,22 @@ function formatAuthResult(auth) {
     if (!auth) return 'Nie sprawdzono';
     
     if (auth.valid) {
+        if (auth.policy) {
+            return `✅ Poprawne (polityka: ${escapeHtml(auth.policy)})`;
+        }
         return '✅ Poprawne';
     } else if (auth.result === 'fail') {
         return '❌ Niepoprawne';
-    } else if (auth.result === 'none') {
+    } else if (auth.result === 'none' || auth.result === undefined) {
+        if (auth.errors && auth.errors.length > 0) {
+            return '⚪ Nie skonfigurowane';
+        }
         return '⚪ Brak';
     } else {
-        return `⚠️ ${auth.result}`;
+        return `⚠️ ${escapeHtml(auth.result || 'Nieznany status')}`;
     }
 }
 
-// Models Tab
 async function refreshModels() {
     const modelsContainer = document.getElementById('models-container');
     const featuresContainer = document.getElementById('features-container');
@@ -257,13 +260,11 @@ async function refreshModels() {
     featuresContainer.innerHTML = '<div class="loading">Ładowanie...</div>';
     
     try {
-        // Load models info
         const modelsResponse = await fetch(`${API_BASE_URL}/api/models`);
         const modelsData = await modelsResponse.json();
         
         modelsContainer.innerHTML = '';
-        
-        // Display loaded models
+
         const loadedModels = [
             {
                 name: 'Random Forest Classifier',
@@ -281,8 +282,7 @@ async function refreshModels() {
             const card = createModelCard(model);
             modelsContainer.appendChild(card);
         });
-        
-        // Load feature importance
+
         const featuresResponse = await fetch(`${API_BASE_URL}/api/feature-importance?top_n=15`);
         const featuresData = await featuresResponse.json();
         
@@ -335,7 +335,7 @@ function createFeatureItem(feature, maxImportance) {
     const percentage = (feature.importance / maxImportance * 100).toFixed(1);
     
     item.innerHTML = `
-        <div class="feature-name">${feature.feature}</div>
+        <div class="feature-name">${escapeHtml(feature.feature)}</div>
         <div class="feature-bar">
             <div class="feature-bar-fill" style="width: ${percentage}%"></div>
         </div>
@@ -345,7 +345,6 @@ function createFeatureItem(feature, maxImportance) {
     return item;
 }
 
-// Stats Tab
 async function refreshStats() {
     const statsContainer = document.getElementById('stats-container');
     statsContainer.innerHTML = '<div class="loading">Ładowanie statystyk...</div>';
@@ -383,22 +382,42 @@ async function refreshStats() {
                     }
                 </div>
         `;
-        
-        // Pobierz metryki ewaluacji modeli
+
         try {
             const evalResponse = await fetch(`${API_BASE_URL}/api/evaluation-metrics`);
             if (evalResponse.ok) {
                 const evalData = await evalResponse.json();
                 
+                const modelDisplayNames = {
+                    'random_forest': 'Random Forest',
+                    'isolation_forest': 'Isolation Forest',
+                    'weighted_ensemble': 'Agregacja modeli (RF + IF)',
+                };
+                
                 for (const [modelName, metrics] of Object.entries(evalData.models || {})) {
-                    const displayName = modelName === 'random_forest' 
-                        ? 'Random Forest' : 'Isolation Forest';
+                    const displayName = modelDisplayNames[modelName] || modelName;
                     
                     const cm = metrics.confusion_matrix || [];
                     const tn = cm[0] ? cm[0][0] : 0;
                     const fp = cm[0] ? cm[0][1] : 0;
                     const fn = cm[1] ? cm[1][0] : 0;
                     const tp = cm[1] ? cm[1][1] : 0;
+                    
+                    let extraMetrics = '';
+                    if (metrics.roc_auc) {
+                        extraMetrics += `
+                            <div class="model-detail">
+                                <div class="detail-label">ROC AUC</div>
+                                <div class="detail-value metric-good">${(metrics.roc_auc * 100).toFixed(1)}%</div>
+                            </div>`;
+                    }
+                    if (metrics.optimal_threshold) {
+                        extraMetrics += `
+                            <div class="model-detail">
+                                <div class="detail-label">Próg decyzyjny</div>
+                                <div class="detail-value">${metrics.optimal_threshold.toFixed(3)}</div>
+                            </div>`;
+                    }
                     
                     html += `
                         <div class="model-card">
@@ -420,6 +439,7 @@ async function refreshStats() {
                                     <div class="detail-label">Accuracy</div>
                                     <div class="detail-value">${(metrics.accuracy * 100).toFixed(1)}%</div>
                                 </div>
+                                ${extraMetrics}
                             </div>
                             <div class="confusion-matrix">
                                 <h4>Macierz pomyłek</h4>
@@ -475,10 +495,8 @@ async function refreshStats() {
     }
 }
 
-// Event listeners for filters
 document.getElementById('risk-filter')?.addEventListener('change', refreshAlerts);
 
-// Auto-refresh (every 30 seconds)
 setInterval(() => {
     const activeTab = document.querySelector('.tab-content.active').id.replace('-tab', '');
     if (activeTab === 'alerts') {
