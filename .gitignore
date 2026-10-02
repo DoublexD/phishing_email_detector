@@ -89,9 +89,6 @@ tmp/
 temp/
 *.tmp
 
-# Project docs to keep local-only
-README.md
-*.md
 
 # Diploma thesis (keep local-only)
 praca-dyplomowa-latex/
